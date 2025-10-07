@@ -72,6 +72,7 @@ export default function HomeScreen() {
           <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
           <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
           <ThemedText type="defaultSemiBold">app-example</ThemedText>.
+          <Link href="/teste">Abrir Tela de Teste</Link>
         </ThemedText>
       </ThemedView>
     </ParallaxScrollView>
