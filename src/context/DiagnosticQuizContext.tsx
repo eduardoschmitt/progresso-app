@@ -40,7 +40,7 @@ type DiagnosticQuizContextValue = {
   savingQuestionId: string | null;
   requiresReauthentication: boolean;
   selectOption: (questionId: string, optionId: string) => Promise<void>;
-  goToNext: () => void;
+  goToNext: () => Promise<void>;
   goToPrevious: () => void;
   retry: () => Promise<void>;
   finalize: () => Promise<void>;
@@ -88,6 +88,10 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
 
   const sessionIdRef = useRef<string | null>(null);
   const answersRef = useRef<Record<string, string>>({});
+  const submittedAnswersRef = useRef<Record<string, string>>({});
+  const pendingQuestionsRef = useRef<Set<string>>(new Set());
+  const quizQuestions = useMemo(() => quiz?.questoes ?? [], [quiz]);
+  const totalQuizQuestions = quizQuestions.length;
 
   const resetState = useCallback(async () => {
     setQuiz(null);
@@ -99,6 +103,8 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
     setRequiresReauthentication(false);
     sessionIdRef.current = null;
     answersRef.current = {};
+    submittedAnswersRef.current = {};
+    pendingQuestionsRef.current = new Set();
     setAnswers({});
     await clearDiagnosticProgress();
   }, []);
@@ -138,12 +144,14 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
 
       if (storedProgress && storedProgress.sessionId === sessionId) {
         answersRef.current = storedProgress.answers;
+        submittedAnswersRef.current = storedProgress.answers;
         setAnswers(storedProgress.answers);
         setCurrentQuestionIndex(
           Math.min(storedProgress.currentQuestionIndex, Math.max(quizData.questoes.length - 1, 0)),
         );
       } else {
         answersRef.current = {};
+        submittedAnswersRef.current = {};
         setAnswers({});
         await clearDiagnosticProgress();
         setCurrentQuestionIndex(0);
@@ -259,6 +267,96 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
     [markDiagnosticComplete, resetState, router, session, status],
   );
 
+  const flushAnswerForQuestion = useCallback(
+    async (questionId: string): Promise<DiagnosticAnswerPayload | undefined> => {
+      if (!pendingQuestionsRef.current.has(questionId)) {
+        return undefined;
+      }
+
+      if (!session || !sessionIdRef.current) {
+        setErrorMessage('Sessão inválida. Faça login novamente.');
+        return undefined;
+      }
+
+      const selectedOption = answersRef.current[questionId];
+
+      if (!selectedOption) {
+        pendingQuestionsRef.current.delete(questionId);
+        return undefined;
+      }
+
+      const previouslySubmitted = submittedAnswersRef.current[questionId];
+
+      setSavingQuestionId(questionId);
+      setStatus('saving');
+
+      try {
+        let response: DiagnosticAnswerPayload | undefined;
+
+        if (previouslySubmitted) {
+          response = await updateDiagnosticQuizAnswer(
+            session.token,
+            sessionIdRef.current,
+            questionId,
+            selectedOption,
+          );
+        } else {
+          response = await submitDiagnosticQuizAnswer(session.token, sessionIdRef.current, {
+            questaoId: questionId,
+            opcaoId: selectedOption,
+          });
+        }
+
+        submittedAnswersRef.current = {
+          ...submittedAnswersRef.current,
+          [questionId]: selectedOption,
+        };
+        pendingQuestionsRef.current.delete(questionId);
+        setSavingQuestionId(null);
+        setStatus('ready');
+        await persistProgress(currentQuestionIndex, { ...answersRef.current });
+
+        return response;
+      } catch (error) {
+        console.error('Failed to submit diagnostic answer', error);
+
+        setSavingQuestionId(null);
+        setStatus('ready');
+
+        if (error instanceof ApiError && error.status === 401) {
+          setRequiresReauthentication(true);
+          setErrorMessage('Sua sessão expirou. Faça login novamente.');
+          return undefined;
+        }
+
+        setErrorMessage('Não foi possível salvar sua resposta. Verifique sua conexão e tente novamente.');
+
+        return undefined;
+      }
+    },
+    [currentQuestionIndex, persistProgress, session],
+  );
+
+  const flushAllPending = useCallback(async () => {
+    const responses: DiagnosticAnswerPayload[] = [];
+
+    for (const question of quizQuestions) {
+      if (!pendingQuestionsRef.current.has(question.id)) {
+        continue;
+      }
+
+      const response = await flushAnswerForQuestion(question.id);
+
+      if (!response) {
+        return responses;
+      }
+
+      responses.push(response);
+    }
+
+    return responses;
+  }, [flushAnswerForQuestion, quizQuestions]);
+
   const selectOption = useCallback(
     async (questionId: string, optionId: string) => {
       if (!session || !sessionIdRef.current) {
@@ -277,64 +375,31 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
 
       answersRef.current = optimisticAnswers;
       setAnswers(optimisticAnswers);
-      setSavingQuestionId(questionId);
+      pendingQuestionsRef.current.add(questionId);
       setErrorMessage(null);
-      setStatus('saving');
 
       try {
-        let response: DiagnosticAnswerPayload | undefined;
-
-        if (previousValue) {
-          response = await updateDiagnosticQuizAnswer(
-            session.token,
-            sessionIdRef.current,
-            questionId,
-            optionId,
-          );
-        } else {
-          response = await submitDiagnosticQuizAnswer(session.token, sessionIdRef.current, {
-            questaoId: questionId,
-            opcaoId: optionId,
-          });
-        }
-
-        setSavingQuestionId(null);
-        setStatus('ready');
-
-        const nextAnswers = { ...answersRef.current };
-        await persistProgress(currentQuestionIndex, nextAnswers);
-
-        const totalQuestions = quiz?.questoes.length ?? 0;
-        const answeredCount = Object.keys(nextAnswers).length;
-
-        if (totalQuestions > 0 && answeredCount >= totalQuestions) {
-          await finalizeQuiz(response);
-        }
+        await persistProgress(currentQuestionIndex, optimisticAnswers);
       } catch (error) {
-        console.error('Failed to submit diagnostic answer', error);
-
-        answersRef.current = snapshotBeforeChange;
-        setAnswers(snapshotBeforeChange);
-        setSavingQuestionId(null);
-
-        if (error instanceof ApiError && error.status === 401) {
-          setRequiresReauthentication(true);
-          setErrorMessage('Sua sessão expirou. Faça login novamente.');
-          setStatus('ready');
-          return;
-        }
-
-        setErrorMessage('Não foi possível salvar sua resposta. Verifique sua conexão e tente novamente.');
-        setStatus('ready');
+        console.warn('Failed to persist diagnostic quiz progress after selection', error);
       }
     },
-    [currentQuestionIndex, finalizeQuiz, persistProgress, quiz?.questoes.length, session],
+    [currentQuestionIndex, persistProgress, session],
   );
 
-  const goToNext = useCallback(() => {
+  const goToNext = useCallback(async () => {
+    const question = quizQuestions[currentQuestionIndex];
+
+    if (question) {
+      const response = await flushAnswerForQuestion(question.id);
+
+      if (!response && pendingQuestionsRef.current.has(question.id)) {
+        return;
+      }
+    }
+
     setCurrentQuestionIndex((prevIndex) => {
-      const totalQuestions = quiz?.questoes.length ?? 0;
-      const nextIndex = Math.min(prevIndex + 1, Math.max(totalQuestions - 1, 0));
+      const nextIndex = Math.min(prevIndex + 1, Math.max(totalQuizQuestions - 1, 0));
 
       if (nextIndex !== prevIndex) {
         void persistProgress(nextIndex);
@@ -342,7 +407,7 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
 
       return nextIndex;
     });
-  }, [persistProgress, quiz?.questoes.length]);
+  }, [currentQuestionIndex, flushAnswerForQuestion, persistProgress, quizQuestions, totalQuizQuestions]);
 
   const goToPrevious = useCallback(() => {
     setCurrentQuestionIndex((prevIndex) => {
@@ -369,16 +434,26 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
       return;
     }
 
-    const totalQuestions = quiz.questoes.length;
     const answeredCount = Object.keys(answersRef.current).length;
 
-    if (answeredCount < totalQuestions) {
+    if (answeredCount < totalQuizQuestions) {
       setErrorMessage('Responda todas as perguntas antes de finalizar.');
       return;
     }
 
+    const responses = await flushAllPending();
+
+    if (pendingQuestionsRef.current.size > 0) {
+      return;
+    }
+
+    if (responses.some((response) => response?.concluido)) {
+      await finalizeQuiz(responses.find((response) => response?.concluido));
+      return;
+    }
+
     await finalizeQuiz();
-  }, [finalizeQuiz, quiz]);
+  }, [finalizeQuiz, flushAllPending, quiz, totalQuizQuestions]);
 
   const navigateToLogin = useCallback(async () => {
     await clearSession();

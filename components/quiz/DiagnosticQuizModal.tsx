@@ -174,7 +174,9 @@ export default function DiagnosticQuizModal() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.navButton, !canGoNext && styles.navButtonDisabled]}
-                    onPress={goToNext}
+                    onPress={() => {
+                      void goToNext();
+                    }}
                     disabled={!canGoNext || isSaving || isFinalizing}
                     accessibilityRole="button"
                     accessibilityState={{ disabled: !canGoNext }}
