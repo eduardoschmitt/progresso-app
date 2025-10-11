@@ -169,6 +169,12 @@ export const submitDiagnosticQuizAnswer = (
     withAuthorization(token, { method: 'POST', body: payload }),
   );
 
+export const concludeDiagnosticQuizSession = (token: string, sessaoId: string) =>
+  request<DiagnosticAnswerPayload>(
+    `/api/quizzes/diagnostico/sessoes/${sessaoId}/concluir`,
+    withAuthorization(token, { method: 'POST' }),
+  );
+
 const shouldFallback = (error: unknown) =>
   error instanceof ApiError && [404, 405, 409, 422, 500].includes(error.status);
 

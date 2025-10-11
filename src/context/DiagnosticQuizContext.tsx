@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 
 import {
   createDiagnosticQuizSession,
+  concludeDiagnosticQuizSession,
   DiagnosticAnswerPayload,
   DiagnosticQuizPayload,
   DiagnosticQuizQuestion,
@@ -257,7 +258,11 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
         }
 
         setStatus('ready');
-        setErrorMessage('Ainda existem perguntas sem resposta. Confira o questionário e tente novamente.');
+        if (serverResponse?.mensagem) {
+          setErrorMessage(serverResponse.mensagem);
+        } else {
+          setErrorMessage('Ainda existem perguntas sem resposta. Confira o questionário e tente novamente.');
+        }
       } catch (error) {
         console.error('Failed to confirm diagnostic completion', error);
         setStatus('ready');
@@ -430,7 +435,7 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
   }, []);
 
   const finalize = useCallback(async () => {
-    if (!quiz) {
+    if (!quiz || !session || !sessionIdRef.current) {
       return;
     }
 
@@ -447,13 +452,37 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
       return;
     }
 
-    if (responses.some((response) => response?.concluido)) {
-      await finalizeQuiz(responses.find((response) => response?.concluido));
-      return;
+    let response = responses.find((item) => item?.concluido);
+
+    if (!response) {
+      try {
+        response = await concludeDiagnosticQuizSession(session.token, sessionIdRef.current);
+      } catch (error) {
+        console.error('Failed to conclude diagnostic quiz session', error);
+
+        if (error instanceof ApiError) {
+          if (error.status === 401) {
+            setRequiresReauthentication(true);
+            setErrorMessage('Sua sessão expirou. Faça login novamente.');
+          } else {
+            setErrorMessage(error.message || 'Não foi possível concluir o diagnóstico.');
+          }
+        } else {
+          setErrorMessage('Não foi possível concluir o diagnóstico. Verifique sua conexão e tente novamente.');
+        }
+
+        return;
+      }
     }
 
-    await finalizeQuiz();
-  }, [finalizeQuiz, flushAllPending, quiz, totalQuizQuestions]);
+    await finalizeQuiz(response);
+  }, [
+    finalizeQuiz,
+    flushAllPending,
+    quiz,
+    session,
+    totalQuizQuestions,
+  ]);
 
   const navigateToLogin = useCallback(async () => {
     await clearSession();
