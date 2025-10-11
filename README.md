@@ -25,6 +25,14 @@ In the output, you'll find options to open the app in a
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
+### Como funcionam as pastas `(auth)` e `(tabs)`
+
+- O Expo Router usa **grupos de rotas**: qualquer pasta entre parênteses não vira uma rota por si só, ela serve apenas para organizar telas que compartilham o mesmo layout.
+- Em `app/(auth)` ficam as telas de autenticação (login/cadastro). O arquivo `app/(auth)/_layout.tsx` define o stack sem cabeçalho para essas telas.
+- Em `app/(tabs)` ficam as telas pós-login com abas inferiores. O arquivo `app/(tabs)/_layout.tsx` monta o tab navigator e cada arquivo dentro dele vira uma aba.
+- O layout raiz `app/_layout.tsx` monta uma pilha com esses dois grupos e começa pelo `(auth)`. Depois que o usuário autentica, você pode navegar para as rotas dentro de `(tabs)`.
+- Você pode renomear os grupos ou mover telas conforme preferir; basta manter a mesma estrutura de layouts (por exemplo, criar outro `_layout.tsx`) para controlar a navegação e visual.
+
 ## Get a fresh project
 
 When you're ready, run:
