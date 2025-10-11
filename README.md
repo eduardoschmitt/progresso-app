@@ -33,6 +33,13 @@ You can start developing by editing the files inside the **app** directory. This
 - O layout raiz `app/_layout.tsx` monta uma pilha com esses dois grupos e começa pelo `(auth)`. Depois que o usuário autentica, você pode navegar para as rotas dentro de `(tabs)`.
 - Você pode renomear os grupos ou mover telas conforme preferir; basta manter a mesma estrutura de layouts (por exemplo, criar outro `_layout.tsx`) para controlar a navegação e visual.
 
+### Conectando o app à sua API em rede local
+
+- O helper `src/lib/api.ts` lê a URL base da API em `process.env.EXPO_PUBLIC_API_URL`. Crie um arquivo `.env` (ou `.env.local`) na raiz do projeto com o valor apropriado para cada ambiente.
+- Em homologação/local, você pode apontar para o IP da sua máquina: por exemplo, `EXPO_PUBLIC_API_URL=http://192.168.0.134:8080`. O dispositivo que roda o app precisa estar na mesma rede Wi-Fi/LAN e o computador deve permitir conexões (verifique firewall/antivírus).
+- Para Android emulador há um atalho (`10.0.2.2`), mas dispositivos reais exigem o IP real. No iOS simulador ou web local você também pode usar `http://localhost:8080` se o backend estiver na mesma máquina.
+- Em produção, defina `EXPO_PUBLIC_API_URL` para o endpoint público do backend. Caso a variável não esteja presente, o helper cai em `http://10.0.2.2:8080` apenas durante o desenvolvimento; em builds de produção sem a variável, ele lança erro para evitar apontar para o backend errado.
+
 ## Get a fresh project
 
 When you're ready, run:
