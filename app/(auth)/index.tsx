@@ -12,7 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 
 import { ApiError, apiConfig, loginUsuario, registrarUsuario } from '@/src/lib/api';
-import { saveToken } from '@/src/lib/auth-storage';
+import { saveToken, saveUser } from '@/src/lib/auth-storage';
 
 type AuthMode = 'login' | 'register';
 
@@ -62,7 +62,10 @@ export default function AuthScreen() {
         senha: form.senha,
       });
 
-      await saveToken(loginResponse.token);
+      await Promise.all([
+        saveToken(loginResponse.token),
+        saveUser({ id: loginResponse.id, nome: loginResponse.nome, email: loginResponse.email }),
+      ]);
 
       setFeedback(`Bem-vindo, ${loginResponse.nome}!`);
 

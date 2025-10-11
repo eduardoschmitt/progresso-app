@@ -74,6 +74,36 @@ npm run reset-project
 
 This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
+## Fluxo do quiz diagnóstico
+
+O aplicativo agora controla automaticamente o quiz diagnóstico obrigatório após o login. Quando o usuário autentica:
+
+- O app consulta `GET /api/quizzes/diagnostico` usando o token salvo no SecureStore/localStorage.
+- Caso o diagnóstico já esteja concluído, a home é exibida normalmente com uma mensagem de confirmação.
+- Se ainda houver perguntas pendentes, o fluxo do quiz aparece em tela cheia com carregamento, tratamento de erros e progresso por pergunta.
+- As respostas são persistidas imediatamente no backend (`POST /api/quizzes/diagnostico/sessoes/{sessaoId}/respostas`) e o estado local fica salvo em armazenamento seguro para evitar perda em caso de refresh/fechamento.
+- Ao finalizar a última pergunta o app limpa o progresso salvo, mostra um banner de sucesso na home e mantém o usuário nas abas principais.
+
+### Como testar o fluxo
+
+1. Configure o backend com as rotas do quiz e garanta que o login retorne `token`, `id`, `nome` e `email`.
+2. Instale as dependências e inicie o app:
+
+   ```bash
+   npm install
+   npx expo start
+   ```
+
+3. Faça login pelo app. Se o diagnóstico estiver pendente, o fluxo abre automaticamente. Responda às questões e verifique as requisições no backend.
+4. Para limpar o progresso local durante os testes, basta sair da conta ou remover o app do dispositivo/emulador.
+5. Execute os testes unitários relacionados às utilidades do quiz com:
+
+   ```bash
+   npm run test
+   ```
+
+O teste valida o cálculo de progresso, o arredondamento da porcentagem e o controle do índice de perguntas.
+
 ## Learn more
 
 To learn more about developing your project with Expo, look at the following resources:
