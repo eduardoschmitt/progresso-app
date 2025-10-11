@@ -9,10 +9,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
 
 import { ApiError, apiConfig, loginUsuario, registrarUsuario } from '@/src/lib/api';
+import { saveToken } from '@/src/lib/auth-storage';
 
 type AuthMode = 'login' | 'register';
 
@@ -21,8 +21,6 @@ type FormState = {
   email: string;
   senha: string;
 };
-
-const SECURE_TOKEN_KEY = 'auth.token';
 
 export default function AuthScreen() {
   const router = useRouter();
@@ -64,7 +62,7 @@ export default function AuthScreen() {
         senha: form.senha,
       });
 
-      await SecureStore.setItemAsync(SECURE_TOKEN_KEY, loginResponse.token);
+      await saveToken(loginResponse.token);
 
       setFeedback(`Bem-vindo, ${loginResponse.nome}!`);
 
