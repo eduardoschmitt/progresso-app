@@ -40,6 +40,30 @@ You can start developing by editing the files inside the **app** directory. This
 - Para Android emulador há um atalho (`10.0.2.2`), mas dispositivos reais exigem o IP real. No iOS simulador ou web local você também pode usar `http://localhost:8080` se o backend estiver na mesma máquina.
 - Em produção, defina `EXPO_PUBLIC_API_URL` para o endpoint público do backend. Caso a variável não esteja presente, o helper cai em `http://10.0.2.2:8080` apenas durante o desenvolvimento; em builds de produção sem a variável, ele lança erro para evitar apontar para o backend errado.
 
+#### Liberando CORS para o Expo
+
+- Ao testar pelo Expo na web, o navegador usa a porta `8081` (`http://localhost:8081`) como origem. Adicione esse endereço (e outros domínios que você usar, como `http://192.168.0.134:8081` quando acessar pela rede) na configuração de CORS do seu backend Spring Boot.
+- Um exemplo seria ajustar o `allowedOrigins` em `CorsConfig`:
+
+  ```java
+  registry.addMapping("/**")
+          .allowedOrigins(
+              "http://192.168.0.134:8080",
+              "http://192.168.0.134:8081",
+              "http://localhost:3000",
+              "http://localhost:8081",
+              "capacitor://localhost",
+              "ionic://localhost"
+          )
+          .allowedMethods("GET","POST","PUT","DELETE","OPTIONS")
+          .allowedHeaders("*")
+          .exposedHeaders("Authorization","Location")
+          .allowCredentials(true)
+          .maxAge(3600);
+  ```
+
+- Reinicie o backend após alterar a configuração. Sem expor o cabeçalho `Access-Control-Allow-Origin` correspondente, navegadores bloquearão a requisição antes mesmo de chegar na API.
+
 ## Get a fresh project
 
 When you're ready, run:
