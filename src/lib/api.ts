@@ -1,8 +1,10 @@
 import { Platform } from 'react-native';
 
+import { deleteToken, deleteUser, getToken } from './auth-storage';
+
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-type RequestOptions = {
+export type RequestOptions = {
   method?: HttpMethod;
   body?: unknown;
   headers?: Record<string, string>;
@@ -29,7 +31,7 @@ export type LoginResponse = {
   expiresAt: string;
 };
 
-class ApiError extends Error {
+export class ApiError extends Error {
   readonly status: number;
   readonly details?: unknown;
 
@@ -68,7 +70,7 @@ const buildUrl = (path: string) => {
   return `${normalizedBaseUrl}${sanitizedPath}`;
 };
 
-const request = async <T>(path: string, options: RequestOptions = {}): Promise<T> => {
+export const request = async <T>(path: string, options: RequestOptions = {}): Promise<T> => {
   const { method = 'GET', body, headers } = options;
 
   const response = await fetch(buildUrl(path), {
@@ -103,10 +105,39 @@ export const registrarUsuario = (dados: RegisterPayload) =>
 export const loginUsuario = (dados: LoginPayload) =>
   request<LoginResponse>('/api/usuarios/login', { method: 'POST', body: dados });
 
+export const authorizedRequest = async <T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> => {
+  const token = await getToken();
+
+  if (!token) {
+    throw new ApiError('Sessão expirada. Faça login novamente.', 401);
+  }
+
+  try {
+    return await request<T>(path, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...options.headers,
+      },
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      await deleteToken();
+      await deleteUser();
+      throw new ApiError('Sessão expirada. Faça login novamente.', error.status, error.details);
+    }
+
+    throw error;
+  }
+};
+
+
 export const apiConfig = {
   baseUrl: normalizedBaseUrl,
   isUsingFallback: !process.env.EXPO_PUBLIC_API_URL && __DEV__,
   platform: Platform.OS,
 };
 
-export { ApiError };
