@@ -9,6 +9,7 @@ import {
   DiagnosticQuizQuestion,
   getDiagnosticQuiz,
   submitDiagnosticQuizAnswer,
+  updateDiagnosticQuizAnswer,
   ApiError,
 } from '@/src/lib/api';
 import {
@@ -265,27 +266,42 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
         return;
       }
 
-      const currentAnswers = { ...answersRef.current };
-      const previousValue = currentAnswers[questionId];
-      currentAnswers[questionId] = optionId;
+      const snapshotBeforeChange = { ...answersRef.current };
+      const previousValue = snapshotBeforeChange[questionId];
 
-      answersRef.current = currentAnswers;
-      setAnswers(currentAnswers);
+      if (previousValue === optionId) {
+        return;
+      }
+
+      const optimisticAnswers = { ...snapshotBeforeChange, [questionId]: optionId };
+
+      answersRef.current = optimisticAnswers;
+      setAnswers(optimisticAnswers);
       setSavingQuestionId(questionId);
       setErrorMessage(null);
       setStatus('saving');
 
       try {
-        const response = await submitDiagnosticQuizAnswer(session.token, sessionIdRef.current, {
-          questaoId: questionId,
-          opcaoId: optionId,
-        });
+        let response: DiagnosticAnswerPayload | undefined;
+
+        if (previousValue) {
+          response = await updateDiagnosticQuizAnswer(
+            session.token,
+            sessionIdRef.current,
+            questionId,
+            optionId,
+          );
+        } else {
+          response = await submitDiagnosticQuizAnswer(session.token, sessionIdRef.current, {
+            questaoId: questionId,
+            opcaoId: optionId,
+          });
+        }
 
         setSavingQuestionId(null);
         setStatus('ready');
 
         const nextAnswers = { ...answersRef.current };
-        setAnswers(nextAnswers);
         await persistProgress(currentQuestionIndex, nextAnswers);
 
         const totalQuestions = quiz?.questoes.length ?? 0;
@@ -297,21 +313,14 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
       } catch (error) {
         console.error('Failed to submit diagnostic answer', error);
 
-        const revertedAnswers = { ...answersRef.current };
-
-        if (previousValue) {
-          revertedAnswers[questionId] = previousValue;
-        } else {
-          delete revertedAnswers[questionId];
-        }
-
-        answersRef.current = revertedAnswers;
-        setAnswers(revertedAnswers);
+        answersRef.current = snapshotBeforeChange;
+        setAnswers(snapshotBeforeChange);
         setSavingQuestionId(null);
 
         if (error instanceof ApiError && error.status === 401) {
           setRequiresReauthentication(true);
           setErrorMessage('Sua sessão expirou. Faça login novamente.');
+          setStatus('ready');
           return;
         }
 

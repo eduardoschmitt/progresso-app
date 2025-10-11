@@ -169,6 +169,34 @@ export const submitDiagnosticQuizAnswer = (
     withAuthorization(token, { method: 'POST', body: payload }),
   );
 
+export const updateDiagnosticQuizAnswer = async (
+  token: string,
+  sessaoId: string,
+  questionId: string,
+  optionId: string,
+) => {
+  const basePath = `/api/quizzes/diagnostico/sessoes/${sessaoId}/respostas`;
+
+  try {
+    return await request<DiagnosticAnswerPayload>(
+      `${basePath}/${questionId}`,
+      withAuthorization(token, { method: 'PUT', body: { opcaoId: optionId } }),
+    );
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 404 || error.status === 405)) {
+      return request<DiagnosticAnswerPayload>(
+        basePath,
+        withAuthorization(token, {
+          method: 'PUT',
+          body: { questaoId: questionId, opcaoId: optionId },
+        }),
+      );
+    }
+
+    throw error;
+  }
+};
+
 export const apiConfig = {
   baseUrl: normalizedBaseUrl,
   isUsingFallback: !process.env.EXPO_PUBLIC_API_URL && __DEV__,
