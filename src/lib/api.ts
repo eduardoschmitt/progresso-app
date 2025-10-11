@@ -152,6 +152,24 @@ export type DiagnosticAnswerPayload = {
   mensagem?: string;
 };
 
+export type DiagnosticConclusionSkill = {
+  habilidadeId: string;
+  codigo: string;
+  nome: string;
+  dominio: number;
+  tentativas: number;
+  acertos: number;
+  categoria: string;
+};
+
+export type DiagnosticConclusionPayload = {
+  pontuacao: number;
+  totalQuestoes: number;
+  totalCorretas: number;
+  habilidades: DiagnosticConclusionSkill[];
+  novasInsignias: Record<string, unknown>[];
+};
+
 export const getDiagnosticQuiz = (token: string) =>
   request<DiagnosticQuizPayload>('/api/quizzes/diagnostico', withAuthorization(token));
 
@@ -170,7 +188,7 @@ export const submitDiagnosticQuizAnswer = (
   );
 
 export const concludeDiagnosticQuizSession = (token: string, sessaoId: string) =>
-  request<DiagnosticAnswerPayload>(
+  request<DiagnosticConclusionPayload>(
     `/api/quizzes/diagnostico/sessoes/${sessaoId}/concluir`,
     withAuthorization(token, { method: 'POST' }),
   );

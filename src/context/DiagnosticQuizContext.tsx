@@ -6,6 +6,7 @@ import {
   createDiagnosticQuizSession,
   concludeDiagnosticQuizSession,
   DiagnosticAnswerPayload,
+  DiagnosticConclusionPayload,
   DiagnosticQuizPayload,
   DiagnosticQuizQuestion,
   getDiagnosticQuiz,
@@ -72,6 +73,54 @@ function extractQuizData(payload: DiagnosticQuizPayload): DiagnosticQuizData {
     descricao: payload.descricao,
     questoes: sortedQuestions,
   };
+}
+
+type DiagnosticCompletionResponse =
+  | DiagnosticAnswerPayload
+  | DiagnosticConclusionPayload
+  | undefined;
+
+function isDiagnosticConclusionResponse(
+  payload: DiagnosticCompletionResponse,
+): payload is DiagnosticConclusionPayload {
+  if (!payload || typeof payload !== 'object') {
+    return false;
+  }
+
+  const candidate = payload as Record<string, unknown>;
+  const pontuacao = candidate['pontuacao'];
+  const totalQuestoes = candidate['totalQuestoes'];
+  const totalCorretas = candidate['totalCorretas'];
+  const habilidades = candidate['habilidades'];
+  const novasInsignias = candidate['novasInsignias'];
+
+  return (
+    typeof pontuacao === 'number' &&
+    typeof totalQuestoes === 'number' &&
+    typeof totalCorretas === 'number' &&
+    Array.isArray(habilidades) &&
+    Array.isArray(novasInsignias)
+  );
+}
+
+function isConcludedAnswerResponse(
+  payload: DiagnosticCompletionResponse,
+): payload is DiagnosticAnswerPayload & { concluido: true } {
+  if (!payload || typeof payload !== 'object') {
+    return false;
+  }
+
+  return (payload as DiagnosticAnswerPayload).concluido === true;
+}
+
+function extractServerMessage(payload: DiagnosticCompletionResponse): string | null {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  const candidate = payload as { mensagem?: unknown };
+
+  return typeof candidate.mensagem === 'string' ? candidate.mensagem : null;
 }
 
 export function DiagnosticQuizProvider({ children }: { children: React.ReactNode }) {
@@ -249,7 +298,7 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
   );
 
   const finalizeQuiz = useCallback(
-    async (serverResponse?: DiagnosticAnswerPayload) => {
+    async (serverResponse?: DiagnosticCompletionResponse) => {
       if (!session) {
         return;
       }
@@ -261,7 +310,10 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
       setStatus('finalizing');
 
       try {
-        if (serverResponse?.concluido) {
+        if (
+          isConcludedAnswerResponse(serverResponse) ||
+          isDiagnosticConclusionResponse(serverResponse)
+        ) {
           await markDiagnosticComplete(true);
           await resetState();
           Alert.alert(
@@ -296,8 +348,10 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
         }
 
         setStatus('ready');
-        if (serverResponse?.mensagem) {
-          setErrorMessage(serverResponse.mensagem);
+        const message = extractServerMessage(serverResponse);
+
+        if (message) {
+          setErrorMessage(message);
         } else {
           setErrorMessage('Não foi possível confirmar a conclusão do diagnóstico. Tente novamente.');
         }
@@ -490,7 +544,7 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
       return;
     }
 
-    let response = responses.find((item) => item?.concluido);
+    let response: DiagnosticCompletionResponse = responses.find((item) => item?.concluido);
 
     if (!response) {
       try {
