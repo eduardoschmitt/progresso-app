@@ -8,6 +8,8 @@ type RequestOptions = {
   headers?: Record<string, string>;
 };
 
+const AUTH_HEADER_KEY = 'Authorization';
+
 export type RegisterPayload = {
   nome: string;
   email: string;
@@ -97,11 +99,74 @@ const request = async <T>(path: string, options: RequestOptions = {}): Promise<T
   return payload as T;
 };
 
+const withAuthorization = (token: string, options: RequestOptions = {}): RequestOptions => {
+  const nextHeaders: Record<string, string> = {
+    ...(options.headers ?? {}),
+    [AUTH_HEADER_KEY]: `Bearer ${token}`,
+  };
+
+  return {
+    ...options,
+    headers: nextHeaders,
+  };
+};
+
 export const registrarUsuario = (dados: RegisterPayload) =>
   request<void>('/api/usuarios/registrar', { method: 'POST', body: dados });
 
 export const loginUsuario = (dados: LoginPayload) =>
   request<LoginResponse>('/api/usuarios/login', { method: 'POST', body: dados });
+
+export type DiagnosticQuizOption = {
+  id: string;
+  rotulo: string;
+  correta?: boolean;
+  iconeUrl: string | null;
+};
+
+export type DiagnosticQuizQuestion = {
+  id: string;
+  enunciado: string;
+  tipo: string;
+  ordem: number;
+  opcoes: DiagnosticQuizOption[];
+};
+
+export type DiagnosticQuizPayload = {
+  id: string;
+  titulo: string;
+  descricao: string;
+  questoes: DiagnosticQuizQuestion[];
+  concluido?: boolean;
+  status?: string;
+};
+
+export type DiagnosticSessionPayload = {
+  id: string;
+  status?: string;
+};
+
+export type DiagnosticAnswerPayload = {
+  concluido?: boolean;
+  mensagem?: string;
+};
+
+export const getDiagnosticQuiz = (token: string) =>
+  request<DiagnosticQuizPayload>('/api/quizzes/diagnostico', withAuthorization(token));
+
+export const createDiagnosticQuizSession = (token: string, usuarioId: string) =>
+  request<DiagnosticSessionPayload>('/api/quizzes/diagnostico/sessoes',
+    withAuthorization(token, { method: 'POST', body: { usuarioId } }));
+
+export const submitDiagnosticQuizAnswer = (
+  token: string,
+  sessaoId: string,
+  payload: { questaoId: string; opcaoId: string },
+) =>
+  request<DiagnosticAnswerPayload>(
+    `/api/quizzes/diagnostico/sessoes/${sessaoId}/respostas`,
+    withAuthorization(token, { method: 'POST', body: payload }),
+  );
 
 export const apiConfig = {
   baseUrl: normalizedBaseUrl,

@@ -25,6 +25,24 @@ In the output, you'll find options to open the app in a
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
+## Fluxo do quiz diagnóstico
+
+O quiz diagnóstico é carregado automaticamente após o login de um usuário que ainda não concluiu o questionário.
+
+### Executando o fluxo
+
+1. Certifique-se de definir a variável `EXPO_PUBLIC_API_URL` apontando para o backend que implementa os endpoints de diagnóstico.
+2. Inicie o app com `npx expo start`.
+3. Realize o login por meio da tela em `/(auth)`.
+4. Caso o backend retorne que o diagnóstico está pendente, um modal em tela cheia guiará todas as perguntas.
+
+### Regras principais
+
+- Todas as requisições ao diagnóstico utilizam o token JWT salvo durante o login.
+- O progresso do quiz é salvo localmente; ao recarregar o app, a sessão é retomada se o backend ainda considerar o questionário pendente.
+- Mensagens de erro informam o que ocorreu (ex.: falha de rede ou sessão expirada) e oferecem ações de correção.
+- Ao finalizar as respostas, o app confirma a conclusão com o backend, exibe uma mensagem de sucesso e redireciona o usuário para a aba "Home".
+
 ### Como funcionam as pastas `(auth)` e `(tabs)`
 
 - O Expo Router usa **grupos de rotas**: qualquer pasta entre parênteses não vira uma rota por si só, ela serve apenas para organizar telas que compartilham o mesmo layout.
