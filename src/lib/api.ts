@@ -169,6 +169,9 @@ export const submitDiagnosticQuizAnswer = (
     withAuthorization(token, { method: 'POST', body: payload }),
   );
 
+const shouldFallback = (error: unknown) =>
+  error instanceof ApiError && [404, 405, 409, 422, 500].includes(error.status);
+
 export const updateDiagnosticQuizAnswer = async (
   token: string,
   sessaoId: string,
@@ -177,23 +180,71 @@ export const updateDiagnosticQuizAnswer = async (
 ) => {
   const basePath = `/api/quizzes/diagnostico/sessoes/${sessaoId}/respostas`;
 
+  const attempts: {
+    method: HttpMethod;
+    path: string;
+    body: Record<string, string>;
+  }[] = [
+    { method: 'PUT', path: `${basePath}/${questionId}`, body: { opcaoId: optionId } },
+    {
+      method: 'PUT',
+      path: basePath,
+      body: { questaoId: questionId, opcaoId: optionId },
+    },
+    { method: 'PATCH', path: `${basePath}/${questionId}`, body: { opcaoId: optionId } },
+    {
+      method: 'PATCH',
+      path: basePath,
+      body: { questaoId: questionId, opcaoId: optionId },
+    },
+  ];
+
+  let lastError: ApiError | null = null;
+
+  for (const { method, path, body } of attempts) {
+    try {
+      return await request<DiagnosticAnswerPayload>(
+        path,
+        withAuthorization(token, { method, body }),
+      );
+    } catch (error) {
+      if (error instanceof ApiError) {
+        lastError = error;
+
+        if (shouldFallback(error)) {
+          continue;
+        }
+      }
+
+      throw error;
+    }
+  }
+
   try {
-    return await request<DiagnosticAnswerPayload>(
+    await request<void>(
       `${basePath}/${questionId}`,
-      withAuthorization(token, { method: 'PUT', body: { opcaoId: optionId } }),
+      withAuthorization(token, { method: 'DELETE' }),
     );
   } catch (error) {
-    if (error instanceof ApiError && (error.status === 404 || error.status === 405)) {
-      return request<DiagnosticAnswerPayload>(
-        basePath,
-        withAuthorization(token, {
-          method: 'PUT',
-          body: { questaoId: questionId, opcaoId: optionId },
-        }),
-      );
+    if (!(error instanceof ApiError && (error.status === 404 || error.status === 405))) {
+      throw error;
+    }
+  }
+
+  try {
+    return await request<DiagnosticAnswerPayload>(
+      basePath,
+      withAuthorization(token, {
+        method: 'POST',
+        body: { questaoId: questionId, opcaoId: optionId },
+      }),
+    );
+  } catch (error) {
+    if (error instanceof ApiError) {
+      lastError = error;
     }
 
-    throw error;
+    throw lastError ?? error;
   }
 };
 
