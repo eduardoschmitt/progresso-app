@@ -176,7 +176,7 @@ export const concludeDiagnosticQuizSession = (token: string, sessaoId: string) =
   );
 
 const shouldFallback = (error: unknown) =>
-  error instanceof ApiError && [404, 405, 409, 422, 500].includes(error.status);
+  error instanceof ApiError && [403, 404, 405, 409, 422, 500].includes(error.status);
 
 export const updateDiagnosticQuizAnswer = async (
   token: string,

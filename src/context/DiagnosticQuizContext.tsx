@@ -121,6 +121,13 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
       return;
     }
 
+    if (sessionIdRef.current) {
+      setShowModal(true);
+
+      setStatus((previousStatus) => (previousStatus === 'idle' ? 'ready' : previousStatus));
+      return;
+    }
+
     initializingRef.current = true;
 
     setStatus('loading');
@@ -140,16 +147,28 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
       const quizData = extractQuizData(payload);
       setQuiz(quizData);
 
-      const sessionResponse = await createDiagnosticQuizSession(session.token, session.user.id);
-      const sessionId = sessionResponse.id ?? sessionResponse.sessaoId ?? null;
+      let storedProgress = await getDiagnosticProgress();
+      let sessionId = storedProgress?.sessionId ?? sessionIdRef.current ?? null;
 
       if (!sessionId) {
-        throw new Error('Sessão de diagnóstico inválida.');
+        const sessionResponse = await createDiagnosticQuizSession(session.token, session.user.id);
+        sessionId = sessionResponse.id ?? sessionResponse.sessaoId ?? null;
+
+        if (!sessionId) {
+          throw new Error('Sessão de diagnóstico inválida.');
+        }
+
+        await saveDiagnosticProgress({
+          sessionId,
+          answers: {},
+          currentQuestionIndex: 0,
+          updatedAt: new Date().toISOString(),
+        });
+
+        storedProgress = null;
       }
 
       sessionIdRef.current = sessionId;
-
-      const storedProgress = await getDiagnosticProgress();
 
       if (storedProgress && storedProgress.sessionId === sessionId) {
         answersRef.current = storedProgress.answers;
@@ -162,13 +181,21 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
         answersRef.current = {};
         submittedAnswersRef.current = {};
         setAnswers({});
-        await clearDiagnosticProgress();
         setCurrentQuestionIndex(0);
+
+        await saveDiagnosticProgress({
+          sessionId,
+          answers: {},
+          currentQuestionIndex: 0,
+          updatedAt: new Date().toISOString(),
+        });
       }
 
       setStatus('ready');
     } catch (error) {
       console.error('Failed to initialize diagnostic quiz', error);
+
+      sessionIdRef.current = null;
 
       let message = 'Não foi possível carregar o quiz diagnóstico. Verifique sua conexão e tente novamente.';
 
@@ -272,7 +299,7 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
         if (serverResponse?.mensagem) {
           setErrorMessage(serverResponse.mensagem);
         } else {
-          setErrorMessage('Ainda existem perguntas sem resposta. Confira o questionário e tente novamente.');
+          setErrorMessage('Não foi possível confirmar a conclusão do diagnóstico. Tente novamente.');
         }
       } catch (error) {
         console.error('Failed to confirm diagnostic completion', error);
