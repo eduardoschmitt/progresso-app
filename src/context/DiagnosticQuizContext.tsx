@@ -88,6 +88,7 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
   const [answers, setAnswers] = useState<Record<string, string>>({});
 
   const sessionIdRef = useRef<string | null>(null);
+  const initializingRef = useRef(false);
   const answersRef = useRef<Record<string, string>>({});
   const submittedAnswersRef = useRef<Record<string, string>>({});
   const pendingQuestionsRef = useRef<Set<string>>(new Set());
@@ -103,6 +104,7 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
     setSavingQuestionId(null);
     setRequiresReauthentication(false);
     sessionIdRef.current = null;
+    initializingRef.current = false;
     answersRef.current = {};
     submittedAnswersRef.current = {};
     pendingQuestionsRef.current = new Set();
@@ -114,6 +116,12 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
     if (!session) {
       return;
     }
+
+    if (initializingRef.current) {
+      return;
+    }
+
+    initializingRef.current = true;
 
     setStatus('loading');
     setErrorMessage(null);
@@ -176,6 +184,9 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
       setErrorMessage(message);
       setStatus('error');
       setShowModal(true);
+    }
+    finally {
+      initializingRef.current = false;
     }
   }, [session, markDiagnosticComplete, resetState]);
 
