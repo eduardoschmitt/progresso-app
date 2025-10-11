@@ -125,7 +125,7 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
       setQuiz(quizData);
 
       const sessionResponse = await createDiagnosticQuizSession(session.token, session.user.id);
-      const sessionId = sessionResponse.id;
+      const sessionId = sessionResponse.id ?? sessionResponse.sessaoId ?? null;
 
       if (!sessionId) {
         throw new Error('Sessão de diagnóstico inválida.');

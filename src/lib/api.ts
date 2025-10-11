@@ -142,7 +142,8 @@ export type DiagnosticQuizPayload = {
 };
 
 export type DiagnosticSessionPayload = {
-  id: string;
+  id?: string;
+  sessaoId?: string;
   status?: string;
 };
 
