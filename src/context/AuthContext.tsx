@@ -8,7 +8,7 @@ import {
   getSession,
   saveDiagnosticStatus,
   saveSession,
-} from '@/src/lib/auth-storage';
+} from '@/service/storage/authStorage';
 
 type AuthContextValue = {
   session: AuthSession | null;
