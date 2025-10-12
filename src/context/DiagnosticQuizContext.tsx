@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import type {
   DiagnosticAnswerPayload,
   DiagnosticConclusionPayload,
+  DiagnosticQuiz,
   DiagnosticQuizPayload,
   DiagnosticQuizQuestion,
   DiagnosticSessionStatusPayload,
@@ -27,10 +28,7 @@ import { useAuth } from '@/hooks/use-auth';
 
 export type DiagnosticQuizQuestionWithOptions = DiagnosticQuizQuestion;
 
-export type DiagnosticQuizData = {
-  id: string;
-  titulo: string;
-  descricao: string;
+export type DiagnosticQuizData = Pick<DiagnosticQuiz, 'id' | 'titulo' | 'descricao' | 'tipoQuiz'> & {
   questoes: DiagnosticQuizQuestionWithOptions[];
 };
 
@@ -75,6 +73,7 @@ function extractQuizData(payload: DiagnosticQuizPayload): DiagnosticQuizData {
     id: payload.id,
     titulo: payload.titulo,
     descricao: payload.descricao,
+    tipoQuiz: payload.tipoQuiz,
     questoes: sortedQuestions,
   };
 }
