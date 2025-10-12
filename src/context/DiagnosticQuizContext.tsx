@@ -127,7 +127,7 @@ function extractServerMessage(payload: DiagnosticCompletionResponse): string | n
 
 export function DiagnosticQuizProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { session, markDiagnosticComplete, clearSession } = useAuth();
+  const { session, markDiagnosticComplete, clearSession, isDiagnosticComplete } = useAuth();
 
   const [quiz, setQuiz] = useState<DiagnosticQuizData | null>(null);
   const [status, setStatus] = useState<Status>('idle');
@@ -140,6 +140,9 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
 
   const sessionIdRef = useRef<string | null>(null);
   const initializingRef = useRef(false);
+  const initializationPromiseRef = useRef<Promise<void> | null>(null);
+  const sessionCreationPromiseRef = useRef<Promise<string> | null>(null);
+  const hasPersistedProgressRef = useRef(false);
   const answersRef = useRef<Record<string, string>>({});
   const submittedAnswersRef = useRef<Record<string, string>>({});
   const pendingQuestionsRef = useRef<Set<string>>(new Set());
@@ -156,19 +159,68 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
     setRequiresReauthentication(false);
     sessionIdRef.current = null;
     initializingRef.current = false;
+    initializationPromiseRef.current = null;
+    sessionCreationPromiseRef.current = null;
+    const shouldClearProgress = hasPersistedProgressRef.current;
+    hasPersistedProgressRef.current = false;
     answersRef.current = {};
     submittedAnswersRef.current = {};
     pendingQuestionsRef.current = new Set();
     setAnswers({});
-    await clearDiagnosticProgress();
+
+    if (shouldClearProgress) {
+      await clearDiagnosticProgress();
+    }
   }, []);
 
+  const ensureSessionId = useCallback(
+    async (candidate: string | null): Promise<string> => {
+      if (candidate) {
+        sessionIdRef.current = candidate;
+        return candidate;
+      }
+
+      if (sessionCreationPromiseRef.current) {
+        const existing = await sessionCreationPromiseRef.current;
+        sessionIdRef.current = existing;
+        return existing;
+      }
+
+      if (!session) {
+        throw new Error('Sessão de diagnóstico inválida.');
+      }
+
+      const creationPromise = (async () => {
+        const sessionResponse = await createDiagnosticQuizSession(session.token, session.user.id);
+        const newSessionId = sessionResponse.id ?? sessionResponse.sessaoId ?? null;
+
+        if (!newSessionId) {
+          throw new Error('Sessão de diagnóstico inválida.');
+        }
+
+        return newSessionId;
+      })();
+
+      sessionCreationPromiseRef.current = creationPromise;
+
+      try {
+        const newSessionId = await creationPromise;
+        sessionIdRef.current = newSessionId;
+        return newSessionId;
+      } finally {
+        sessionCreationPromiseRef.current = null;
+      }
+    },
+    [session],
+  );
+
   const initialize = useCallback(async () => {
-    if (!session) {
+    if (!session || isDiagnosticComplete) {
       return;
     }
 
-    if (initializingRef.current) {
+    if (initializationPromiseRef.current) {
+      await initializationPromiseRef.current;
       return;
     }
 
@@ -179,35 +231,36 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
       return;
     }
 
-    initializingRef.current = true;
+    const runInitialization = async () => {
+      initializingRef.current = true;
 
-    setStatus('loading');
-    setErrorMessage(null);
-    setShowModal(true);
-    setRequiresReauthentication(false);
-
-    try {
-      let sessionStatus: DiagnosticSessionStatusPayload | null = null;
+      setStatus('loading');
+      setErrorMessage(null);
+      setShowModal(true);
+      setRequiresReauthentication(false);
 
       try {
-        sessionStatus = await getDiagnosticQuizSessionStatus(session.token, session.user.id);
-      } catch (statusError) {
-        if (statusError instanceof ApiError) {
-          if (statusError.status === 401) {
-            throw statusError;
-          }
+        let sessionStatus: DiagnosticSessionStatusPayload | null = null;
 
-          if (statusError.status !== 404) {
+        try {
+          sessionStatus = await getDiagnosticQuizSessionStatus(session.token, session.user.id);
+        } catch (statusError) {
+          if (statusError instanceof ApiError) {
+            if (statusError.status === 401) {
+              throw statusError;
+            }
+
+            if (statusError.status !== 404) {
+              console.warn('Failed to fetch diagnostic session status', statusError);
+            }
+          } else {
             console.warn('Failed to fetch diagnostic session status', statusError);
           }
-        } else {
-          console.warn('Failed to fetch diagnostic session status', statusError);
         }
-      }
 
-      const sessionStatusCompleted =
-        sessionStatus?.quizRealizado === true ||
-        sessionStatus?.status?.toLowerCase() === 'concluido';
+        const sessionStatusCompleted =
+          sessionStatus?.quizRealizado === true ||
+          sessionStatus?.status?.toLowerCase() === 'concluido';
 
       if (sessionStatusCompleted) {
         await markDiagnosticComplete(true);
@@ -227,7 +280,7 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
       setQuiz(quizData);
 
       let storedProgress = await getDiagnosticProgress();
-      let sessionId =
+      let sessionIdCandidate =
         sessionStatus?.sessaoId ?? storedProgress?.sessionId ?? sessionIdRef.current ?? null;
 
       if (
@@ -236,30 +289,21 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
         storedProgress.sessionId !== sessionStatus.sessaoId
       ) {
         storedProgress = null;
+        hasPersistedProgressRef.current = false;
       }
 
-      if (sessionStatus?.sessaoId && sessionId !== sessionStatus.sessaoId) {
-        sessionId = sessionStatus.sessaoId;
+      if (sessionStatus?.sessaoId && sessionIdCandidate !== sessionStatus.sessaoId) {
+        sessionIdCandidate = sessionStatus.sessaoId;
       }
 
-      if (!sessionId) {
-        const sessionResponse = await createDiagnosticQuizSession(session.token, session.user.id);
-        sessionId = sessionResponse.id ?? sessionResponse.sessaoId ?? null;
-
-        if (!sessionId) {
-          throw new Error('Sessão de diagnóstico inválida.');
-        }
-
-        storedProgress = null;
-      }
-
-      sessionIdRef.current = sessionId;
+      const activeSessionId = await ensureSessionId(sessionIdCandidate);
       pendingQuestionsRef.current = new Set();
 
-      if (storedProgress && storedProgress.sessionId === sessionId) {
+      if (storedProgress && storedProgress.sessionId === activeSessionId) {
         answersRef.current = storedProgress.answers;
         submittedAnswersRef.current = storedProgress.answers;
         setAnswers(storedProgress.answers);
+        hasPersistedProgressRef.current = true;
         setCurrentQuestionIndex(
           Math.min(storedProgress.currentQuestionIndex, Math.max(quizData.questoes.length - 1, 0)),
         );
@@ -315,47 +359,63 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
         setCurrentQuestionIndex(initialIndex);
 
         await saveDiagnosticProgress({
-          sessionId,
+          sessionId: activeSessionId,
           answers: {},
           currentQuestionIndex: initialIndex,
           updatedAt: new Date().toISOString(),
         });
+        hasPersistedProgressRef.current = true;
       }
 
       setStatus('ready');
-    } catch (error) {
-      console.error('Failed to initialize diagnostic quiz', error);
+      } catch (error) {
+        console.error('Failed to initialize diagnostic quiz', error);
 
-      sessionIdRef.current = null;
+        sessionIdRef.current = null;
 
-      let message = 'Não foi possível carregar o quiz diagnóstico. Verifique sua conexão e tente novamente.';
+        let message = 'Não foi possível carregar o quiz diagnóstico. Verifique sua conexão e tente novamente.';
 
-      if (error instanceof ApiError) {
-        if (error.status === 401) {
-          message = 'Sua sessão expirou. Entre novamente para continuar.';
-          setRequiresReauthentication(true);
-        } else if (error.message) {
-          message = error.message;
+        if (error instanceof ApiError) {
+          if (error.status === 401) {
+            message = 'Sua sessão expirou. Entre novamente para continuar.';
+            setRequiresReauthentication(true);
+          } else if (error.message) {
+            message = error.message;
+          }
         }
-      }
 
-      setErrorMessage(message);
-      setStatus('error');
-      setShowModal(true);
+        setErrorMessage(message);
+        setStatus('error');
+        setShowModal(true);
+      } finally {
+        initializingRef.current = false;
+      }
+    };
+
+    const promise = runInitialization();
+    initializationPromiseRef.current = promise;
+
+    try {
+      await promise;
+    } finally {
+      initializationPromiseRef.current = null;
     }
-    finally {
-      initializingRef.current = false;
-    }
-  }, [session, markDiagnosticComplete, resetState]);
+  }, [
+    ensureSessionId,
+    isDiagnosticComplete,
+    markDiagnosticComplete,
+    resetState,
+    session,
+  ]);
 
   useEffect(() => {
-    if (!session) {
+    if (!session || isDiagnosticComplete) {
       void resetState();
       return;
     }
 
     void initialize();
-  }, [initialize, resetState, session]);
+  }, [initialize, isDiagnosticComplete, resetState, session]);
 
   const persistProgress = useCallback(
     async (index: number, answers?: Record<string, string>) => {
@@ -372,6 +432,7 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
 
       try {
         await saveDiagnosticProgress(snapshot);
+        hasPersistedProgressRef.current = true;
       } catch (error) {
         console.warn('Failed to persist diagnostic quiz progress', error);
       }
