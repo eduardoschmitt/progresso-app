@@ -8,6 +8,8 @@ type RequestOptions = {
   headers?: Record<string, string>;
 };
 
+const AUTH_HEADER_KEY = 'Authorization';
+
 export type RegisterPayload = {
   nome: string;
   email: string;
@@ -97,11 +99,196 @@ const request = async <T>(path: string, options: RequestOptions = {}): Promise<T
   return payload as T;
 };
 
+const withAuthorization = (token: string, options: RequestOptions = {}): RequestOptions => {
+  const nextHeaders: Record<string, string> = {
+    ...(options.headers ?? {}),
+    [AUTH_HEADER_KEY]: `Bearer ${token}`,
+  };
+
+  return {
+    ...options,
+    headers: nextHeaders,
+  };
+};
+
 export const registrarUsuario = (dados: RegisterPayload) =>
   request<void>('/api/usuarios/registrar', { method: 'POST', body: dados });
 
 export const loginUsuario = (dados: LoginPayload) =>
   request<LoginResponse>('/api/usuarios/login', { method: 'POST', body: dados });
+
+export type DiagnosticQuizOption = {
+  id: string;
+  rotulo: string;
+  correta?: boolean;
+  iconeUrl: string | null;
+};
+
+export type DiagnosticQuizQuestion = {
+  id: string;
+  enunciado: string;
+  tipo: string;
+  ordem: number;
+  opcoes: DiagnosticQuizOption[];
+};
+
+export type DiagnosticQuizPayload = {
+  id: string;
+  titulo: string;
+  descricao: string;
+  questoes: DiagnosticQuizQuestion[];
+  concluido?: boolean;
+  status?: string;
+};
+
+export type DiagnosticSessionPayload = {
+  id?: string;
+  sessaoId?: string;
+  status?: string;
+};
+
+export type DiagnosticSessionStatusPayload = {
+  quizRealizado: boolean;
+  sessaoId: string | null;
+  status: string | null;
+  totalQuestoes: number;
+  totalRespondidas: number;
+  ultimaQuestaoRespondidaId: string | null;
+  ultimaQuestaoRespondidaOrdem: number | null;
+  proximaQuestaoId: string | null;
+  proximaQuestaoOrdem: number | null;
+};
+
+export type DiagnosticAnswerPayload = {
+  concluido?: boolean;
+  mensagem?: string;
+};
+
+export type DiagnosticConclusionSkill = {
+  habilidadeId: string;
+  codigo: string;
+  nome: string;
+  dominio: number;
+  tentativas: number;
+  acertos: number;
+  categoria: string;
+};
+
+export type DiagnosticConclusionPayload = {
+  pontuacao: number;
+  totalQuestoes: number;
+  totalCorretas: number;
+  habilidades: DiagnosticConclusionSkill[];
+  novasInsignias: Record<string, unknown>[];
+};
+
+export const getDiagnosticQuiz = (token: string) =>
+  request<DiagnosticQuizPayload>('/api/quizzes/diagnostico', withAuthorization(token));
+
+export const createDiagnosticQuizSession = (token: string, usuarioId: string) =>
+  request<DiagnosticSessionPayload>('/api/quizzes/diagnostico/sessoes',
+    withAuthorization(token, { method: 'POST', body: { usuarioId } }));
+
+export const getDiagnosticQuizSessionStatus = (token: string, usuarioId: string) =>
+  request<DiagnosticSessionStatusPayload>(
+    `/api/quizzes/diagnostico/sessoes/usuarios/${usuarioId}/status`,
+    withAuthorization(token),
+  );
+
+export const submitDiagnosticQuizAnswer = (
+  token: string,
+  sessaoId: string,
+  payload: { questaoId: string; opcaoId: string },
+) =>
+  request<DiagnosticAnswerPayload>(
+    `/api/quizzes/diagnostico/sessoes/${sessaoId}/respostas`,
+    withAuthorization(token, { method: 'POST', body: payload }),
+  );
+
+export const concludeDiagnosticQuizSession = (token: string, sessaoId: string) =>
+  request<DiagnosticConclusionPayload>(
+    `/api/quizzes/diagnostico/sessoes/${sessaoId}/concluir`,
+    withAuthorization(token, { method: 'POST' }),
+  );
+
+const shouldFallback = (error: unknown) =>
+  error instanceof ApiError && [403, 404, 405, 409, 422, 500].includes(error.status);
+
+export const updateDiagnosticQuizAnswer = async (
+  token: string,
+  sessaoId: string,
+  questionId: string,
+  optionId: string,
+) => {
+  const basePath = `/api/quizzes/diagnostico/sessoes/${sessaoId}/respostas`;
+
+  const attempts: {
+    method: HttpMethod;
+    path: string;
+    body: Record<string, string>;
+  }[] = [
+    { method: 'PUT', path: `${basePath}/${questionId}`, body: { opcaoId: optionId } },
+    {
+      method: 'PUT',
+      path: basePath,
+      body: { questaoId: questionId, opcaoId: optionId },
+    },
+    { method: 'PATCH', path: `${basePath}/${questionId}`, body: { opcaoId: optionId } },
+    {
+      method: 'PATCH',
+      path: basePath,
+      body: { questaoId: questionId, opcaoId: optionId },
+    },
+  ];
+
+  let lastError: ApiError | null = null;
+
+  for (const { method, path, body } of attempts) {
+    try {
+      return await request<DiagnosticAnswerPayload>(
+        path,
+        withAuthorization(token, { method, body }),
+      );
+    } catch (error) {
+      if (error instanceof ApiError) {
+        lastError = error;
+
+        if (shouldFallback(error)) {
+          continue;
+        }
+      }
+
+      throw error;
+    }
+  }
+
+  try {
+    await request<void>(
+      `${basePath}/${questionId}`,
+      withAuthorization(token, { method: 'DELETE' }),
+    );
+  } catch (error) {
+    if (!(error instanceof ApiError && (error.status === 404 || error.status === 405))) {
+      throw error;
+    }
+  }
+
+  try {
+    return await request<DiagnosticAnswerPayload>(
+      basePath,
+      withAuthorization(token, {
+        method: 'POST',
+        body: { questaoId: questionId, opcaoId: optionId },
+      }),
+    );
+  } catch (error) {
+    if (error instanceof ApiError) {
+      lastError = error;
+    }
+
+    throw lastError ?? error;
+  }
+};
 
 export const apiConfig = {
   baseUrl: normalizedBaseUrl,

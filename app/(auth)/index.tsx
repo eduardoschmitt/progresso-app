@@ -15,7 +15,7 @@ import {
 
 import CustomButton from '@/components/CustomButton';
 import { ApiError, apiConfig, loginUsuario, registrarUsuario } from '@/src/lib/api';
-import { saveToken } from '@/src/lib/auth-storage';
+import { useAuth } from '@/hooks/use-auth';
 
 type AuthMode = 'login' | 'register';
 
@@ -34,6 +34,7 @@ export default function AuthScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { setSession } = useAuth();
 
   const handleChange = (field: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -67,7 +68,14 @@ export default function AuthScreen() {
         senha: form.senha,
       });
 
-      await saveToken(loginResponse.token);
+      await setSession({
+        token: loginResponse.token,
+        user: {
+          id: loginResponse.id,
+          nome: loginResponse.nome,
+          email: loginResponse.email,
+        },
+      });
 
       setFeedback(`Bem-vindo, ${loginResponse.nome}!`);
 
