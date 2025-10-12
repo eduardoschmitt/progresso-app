@@ -53,6 +53,13 @@ export const concludeDiagnosticQuizSession = (token: string, sessaoId: string) =
     ...withAuthorization(token),
   });
 
+export const getDiagnosticQuizResult = (token: string, sessaoId: string) =>
+  request<DiagnosticConclusionPayload>({
+    url: `/api/quizzes/diagnostico/sessoes/${sessaoId}/resultado`,
+    method: 'GET',
+    ...withAuthorization(token),
+  });
+
 export const updateDiagnosticQuizAnswer = async (
   token: string,
   sessaoId: string,
