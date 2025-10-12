@@ -27,10 +27,31 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="explore"
+          name="achievements"
           options={{
-            title: 'Explore',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+            title: 'Conquistas',
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="trophy.fill" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="activities"
+          options={{
+            title: 'Atividades',
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="checkmark.circle" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="habits"
+          options={{
+            title: 'Hábitos',
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="leaf.fill" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: 'Perfil',
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.crop.circle" color={color} />,
           }}
         />
       </Tabs>

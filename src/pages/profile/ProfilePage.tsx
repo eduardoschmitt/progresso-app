@@ -1,13 +1,13 @@
 import React from 'react';
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
-export default function HomePage() {
+export default function ProfilePage() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.title}>Bem-vindo!</Text>
+        <Text style={styles.title}>Perfil</Text>
         <Text style={styles.subtitle}>
-          Explore seus resultados, conquistas e desafios sustentáveis usando o menu abaixo.
+          Personalize suas preferências e acompanhe seus dados pessoais.
         </Text>
       </View>
     </SafeAreaView>
@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
     color: '#0F172A',
   },

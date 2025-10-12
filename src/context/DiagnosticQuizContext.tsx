@@ -1,4 +1,3 @@
-import { Alert } from 'react-native';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 
@@ -25,6 +24,7 @@ import {
   saveDiagnosticProgress,
 } from '@/service/storage/quizStorage';
 import { useAuth } from '@/hooks/use-auth';
+import { useDiagnosticQuizResultContext } from '@/context/DiagnosticQuizResultContext';
 
 export type DiagnosticQuizQuestionWithOptions = DiagnosticQuizQuestion;
 
@@ -129,6 +129,7 @@ function extractServerMessage(payload: DiagnosticCompletionResponse): string | n
 export function DiagnosticQuizProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { session, markDiagnosticComplete, clearSession, isDiagnosticComplete } = useAuth();
+  const { setResult } = useDiagnosticQuizResultContext();
 
   const [quiz, setQuiz] = useState<DiagnosticQuizData | null>(null);
   const [status, setStatus] = useState<Status>('idle');
@@ -454,22 +455,24 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
       setStatus('finalizing');
 
       try {
-        if (
-          isConcludedAnswerResponse(serverResponse) ||
-          isDiagnosticConclusionResponse(serverResponse)
-        ) {
+        let completionPayload: DiagnosticCompletionResponse = serverResponse;
+
+        if (isConcludedAnswerResponse(completionPayload) && sessionIdRef.current) {
+          try {
+            completionPayload = await concludeDiagnosticQuizSession(
+              session.token,
+              sessionIdRef.current,
+            );
+          } catch (error) {
+            console.warn('Failed to fetch diagnostic conclusion after answer response', error);
+          }
+        }
+
+        if (isDiagnosticConclusionResponse(completionPayload)) {
           await markDiagnosticComplete(true);
+          setResult(completionPayload);
           await resetState();
-          Alert.alert(
-            'Diagnóstico concluído!',
-            'Obrigado por compartilhar suas respostas. Vamos redirecionar você para o dashboard.',
-            [
-              {
-                text: 'Ir para o dashboard',
-                onPress: () => router.replace('/(tabs)/index'),
-              },
-            ],
-          );
+          router.replace('/diagnostic-result');
           return;
         }
 
@@ -478,21 +481,12 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
         if (isQuizCompleted(freshPayload)) {
           await markDiagnosticComplete(true);
           await resetState();
-          Alert.alert(
-            'Diagnóstico concluído!',
-            'Obrigado por compartilhar suas respostas. Vamos redirecionar você para o dashboard.',
-            [
-              {
-                text: 'Ir para o dashboard',
-                onPress: () => router.replace('/(tabs)/index'),
-              },
-            ],
-          );
+          router.replace('/(tabs)/index');
           return;
         }
 
         setStatus('ready');
-        const message = extractServerMessage(serverResponse);
+        const message = extractServerMessage(completionPayload);
 
         if (message) {
           setErrorMessage(message);
@@ -505,7 +499,7 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
         setErrorMessage('Não foi possível confirmar a conclusão. Tente novamente.');
       }
     },
-    [markDiagnosticComplete, resetState, router, session, status],
+    [markDiagnosticComplete, resetState, router, session, status, setResult],
   );
 
   const flushAnswerForQuestion = useCallback(
