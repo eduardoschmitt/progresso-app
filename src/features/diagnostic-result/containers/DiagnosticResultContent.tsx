@@ -13,7 +13,7 @@ export function DiagnosticResultContent() {
 
   const navigateToDashboard = useCallback(() => {
     clearResult();
-    router.replace('/(tabs)/index');
+    router.replace('/(tabs)');
   }, [clearResult, router]);
 
   if (!viewModel) {
