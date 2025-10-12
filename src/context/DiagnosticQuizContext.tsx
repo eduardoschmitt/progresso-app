@@ -9,7 +9,9 @@ import {
   DiagnosticConclusionPayload,
   DiagnosticQuizPayload,
   DiagnosticQuizQuestion,
+  DiagnosticSessionStatusPayload,
   getDiagnosticQuiz,
+  getDiagnosticQuizSessionStatus,
   submitDiagnosticQuizAnswer,
   updateDiagnosticQuizAnswer,
   ApiError,
@@ -185,6 +187,34 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
     setRequiresReauthentication(false);
 
     try {
+      let sessionStatus: DiagnosticSessionStatusPayload | null = null;
+
+      try {
+        sessionStatus = await getDiagnosticQuizSessionStatus(session.token, session.user.id);
+      } catch (statusError) {
+        if (statusError instanceof ApiError) {
+          if (statusError.status === 401) {
+            throw statusError;
+          }
+
+          if (statusError.status !== 404) {
+            console.warn('Failed to fetch diagnostic session status', statusError);
+          }
+        } else {
+          console.warn('Failed to fetch diagnostic session status', statusError);
+        }
+      }
+
+      const sessionStatusCompleted =
+        sessionStatus?.quizRealizado === true ||
+        sessionStatus?.status?.toLowerCase() === 'concluido';
+
+      if (sessionStatusCompleted) {
+        await markDiagnosticComplete(true);
+        await resetState();
+        return;
+      }
+
       const payload = await getDiagnosticQuiz(session.token);
 
       if (isQuizCompleted(payload)) {
@@ -197,7 +227,20 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
       setQuiz(quizData);
 
       let storedProgress = await getDiagnosticProgress();
-      let sessionId = storedProgress?.sessionId ?? sessionIdRef.current ?? null;
+      let sessionId =
+        sessionStatus?.sessaoId ?? storedProgress?.sessionId ?? sessionIdRef.current ?? null;
+
+      if (
+        sessionStatus?.sessaoId &&
+        storedProgress?.sessionId &&
+        storedProgress.sessionId !== sessionStatus.sessaoId
+      ) {
+        storedProgress = null;
+      }
+
+      if (sessionStatus?.sessaoId && sessionId !== sessionStatus.sessaoId) {
+        sessionId = sessionStatus.sessaoId;
+      }
 
       if (!sessionId) {
         const sessionResponse = await createDiagnosticQuizSession(session.token, session.user.id);
@@ -207,17 +250,11 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
           throw new Error('Sessão de diagnóstico inválida.');
         }
 
-        await saveDiagnosticProgress({
-          sessionId,
-          answers: {},
-          currentQuestionIndex: 0,
-          updatedAt: new Date().toISOString(),
-        });
-
         storedProgress = null;
       }
 
       sessionIdRef.current = sessionId;
+      pendingQuestionsRef.current = new Set();
 
       if (storedProgress && storedProgress.sessionId === sessionId) {
         answersRef.current = storedProgress.answers;
@@ -227,15 +264,60 @@ export function DiagnosticQuizProvider({ children }: { children: React.ReactNode
           Math.min(storedProgress.currentQuestionIndex, Math.max(quizData.questoes.length - 1, 0)),
         );
       } else {
+        const clampOrderToIndex = (order?: number | null): number | null => {
+          if (order == null) {
+            return null;
+          }
+
+          if (typeof order !== 'number' || Number.isNaN(order)) {
+            return null;
+          }
+
+          const zeroBased = order - 1;
+          const maxIndex = Math.max(quizData.questoes.length - 1, 0);
+
+          if (zeroBased < 0) {
+            return 0;
+          }
+
+          return Math.min(zeroBased, maxIndex);
+        };
+
+        const deriveInitialIndex = (): number => {
+          if (!sessionStatus) {
+            return 0;
+          }
+
+          const nextIndex = clampOrderToIndex(sessionStatus.proximaQuestaoOrdem);
+
+          if (nextIndex !== null) {
+            return nextIndex;
+          }
+
+          const nextFromLast = clampOrderToIndex(
+            sessionStatus.ultimaQuestaoRespondidaOrdem
+              ? sessionStatus.ultimaQuestaoRespondidaOrdem + 1
+              : null,
+          );
+
+          if (nextFromLast !== null) {
+            return nextFromLast;
+          }
+
+          return 0;
+        };
+
+        const initialIndex = deriveInitialIndex();
+
         answersRef.current = {};
         submittedAnswersRef.current = {};
         setAnswers({});
-        setCurrentQuestionIndex(0);
+        setCurrentQuestionIndex(initialIndex);
 
         await saveDiagnosticProgress({
           sessionId,
           answers: {},
-          currentQuestionIndex: 0,
+          currentQuestionIndex: initialIndex,
           updatedAt: new Date().toISOString(),
         });
       }

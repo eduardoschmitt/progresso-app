@@ -147,6 +147,18 @@ export type DiagnosticSessionPayload = {
   status?: string;
 };
 
+export type DiagnosticSessionStatusPayload = {
+  quizRealizado: boolean;
+  sessaoId: string | null;
+  status: string | null;
+  totalQuestoes: number;
+  totalRespondidas: number;
+  ultimaQuestaoRespondidaId: string | null;
+  ultimaQuestaoRespondidaOrdem: number | null;
+  proximaQuestaoId: string | null;
+  proximaQuestaoOrdem: number | null;
+};
+
 export type DiagnosticAnswerPayload = {
   concluido?: boolean;
   mensagem?: string;
@@ -176,6 +188,12 @@ export const getDiagnosticQuiz = (token: string) =>
 export const createDiagnosticQuizSession = (token: string, usuarioId: string) =>
   request<DiagnosticSessionPayload>('/api/quizzes/diagnostico/sessoes',
     withAuthorization(token, { method: 'POST', body: { usuarioId } }));
+
+export const getDiagnosticQuizSessionStatus = (token: string, usuarioId: string) =>
+  request<DiagnosticSessionStatusPayload>(
+    `/api/quizzes/diagnostico/sessoes/usuarios/${usuarioId}/status`,
+    withAuthorization(token),
+  );
 
 export const submitDiagnosticQuizAnswer = (
   token: string,
