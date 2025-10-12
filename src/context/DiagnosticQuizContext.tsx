@@ -2,25 +2,27 @@ import { Alert } from 'react-native';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 
-import {
-  createDiagnosticQuizSession,
-  concludeDiagnosticQuizSession,
+import type {
   DiagnosticAnswerPayload,
   DiagnosticConclusionPayload,
   DiagnosticQuizPayload,
   DiagnosticQuizQuestion,
   DiagnosticSessionStatusPayload,
+} from '@/model/diagnostic';
+import {
+  ApiError,
+  concludeDiagnosticQuizSession,
+  createDiagnosticQuizSession,
   getDiagnosticQuiz,
   getDiagnosticQuizSessionStatus,
   submitDiagnosticQuizAnswer,
   updateDiagnosticQuizAnswer,
-  ApiError,
-} from '@/src/lib/api';
+} from '@/service/diagnosticQuizService';
 import {
   clearDiagnosticProgress,
   getDiagnosticProgress,
   saveDiagnosticProgress,
-} from '@/src/lib/quiz-storage';
+} from '@/service/storage/quizStorage';
 import { useAuth } from '@/hooks/use-auth';
 
 export type DiagnosticQuizQuestionWithOptions = DiagnosticQuizQuestion;
