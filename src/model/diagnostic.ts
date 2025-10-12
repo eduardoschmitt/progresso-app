@@ -1,37 +1,40 @@
-export type DiagnosticQuizOption = {
-  id: string;
-  rotulo: string;
-  correta?: boolean;
-  iconeUrl: string | null;
+import type {
+  Opcao,
+  Questao as QuestaoModel,
+  QuestaoHabilidade,
+  Quiz,
+  Resposta,
+  SessaoQuiz,
+  SessaoQuizStatus,
+} from './quizzes';
+
+export type { Quiz, Opcao, QuestaoHabilidade, Resposta, SessaoQuiz, SessaoQuizStatus };
+
+export type DiagnosticQuizQuestion = QuestaoModel & {
+  opcoes: Opcao[];
+  habilidades?: QuestaoHabilidade[];
 };
 
-export type DiagnosticQuizQuestion = {
-  id: string;
-  enunciado: string;
-  tipo: string;
-  ordem: number;
-  opcoes: DiagnosticQuizOption[];
-};
-
-export type DiagnosticQuizPayload = {
-  id: string;
-  titulo: string;
-  descricao: string;
+export type DiagnosticQuiz = Quiz & {
   questoes: DiagnosticQuizQuestion[];
   concluido?: boolean;
-  status?: string;
+  status?: SessaoQuizStatus;
 };
 
-export type DiagnosticSessionPayload = {
-  id?: string;
+export type DiagnosticQuizPayload = DiagnosticQuiz;
+
+export type DiagnosticQuizQuestionPayload = DiagnosticQuizQuestion;
+
+export type DiagnosticQuizOption = Opcao;
+
+export type DiagnosticSessionPayload = Partial<SessaoQuiz> & {
   sessaoId?: string;
-  status?: string;
 };
 
 export type DiagnosticSessionStatusPayload = {
   quizRealizado: boolean;
   sessaoId: string | null;
-  status: string | null;
+  status: SessaoQuizStatus | null;
   totalQuestoes: number;
   totalRespondidas: number;
   ultimaQuestaoRespondidaId: string | null;
@@ -40,7 +43,7 @@ export type DiagnosticSessionStatusPayload = {
   proximaQuestaoOrdem: number | null;
 };
 
-export type DiagnosticAnswerPayload = {
+export type DiagnosticAnswerPayload = Resposta & {
   concluido?: boolean;
   mensagem?: string;
 };
