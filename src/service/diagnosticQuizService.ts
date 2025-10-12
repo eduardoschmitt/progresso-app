@@ -66,6 +66,11 @@ export const updateDiagnosticQuizAnswer = async (
     url: string;
     data: Record<string, string>;
   }[] = [
+    {
+      method: 'POST',
+      url: basePath,
+      data: { questaoId: questionId, opcaoId: optionId },
+    },
     { method: 'PUT', url: `${basePath}/${questionId}`, data: { opcaoId: optionId } },
     {
       method: 'PUT',
@@ -110,7 +115,7 @@ export const updateDiagnosticQuizAnswer = async (
       ...withAuthorization(token),
     });
   } catch (error) {
-    if (!(error instanceof ApiError && (error.status === 404 || error.status === 405))) {
+    if (!(error instanceof ApiError) || !shouldFallback(error)) {
       throw error;
     }
   }
