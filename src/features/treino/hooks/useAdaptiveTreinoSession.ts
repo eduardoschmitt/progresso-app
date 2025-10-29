@@ -131,11 +131,30 @@ export function useAdaptiveTreinoSession(token?: string, usuarioId?: string) {
       try {
         const payload = await buscarProximaQuestaoTreino(token, sessaoAtiva.sessaoId);
         setStatus(payload.status);
-        setProgresso(payload.progresso);
+        setProgresso({
+          respondidas: payload.questoesRespondidas,
+          total: payload.totalQuestoes,
+        });
         setReforcoEspacado(payload.reforcoEspacado);
-        setQuestaoAtual(payload.questao ?? null);
 
-        if (payload.status === 'concluida' && !payload.questao) {
+        const questaoFormatada: TreinoQuestaoPayload | null = payload.questao
+          ? {
+              id: payload.questao.id,
+              enunciado: payload.questao.enunciado,
+              descricao: payload.questao.descricao ?? null,
+              tipo: payload.questao.tipo,
+              dificuldade: payload.questao.dificuldade,
+              dificuldadeAlvo:
+                payload.dificuldadeAlvo ?? payload.questao.dificuldade,
+              opcoes: payload.questao.opcoes ?? [],
+              habilidadeAlvo: payload.habilidadeAlvo ?? null,
+              metadados: payload.questao.metadados,
+            }
+          : null;
+
+        setQuestaoAtual(questaoFormatada);
+
+        if (payload.status === 'concluida' && !questaoFormatada) {
           await carregarConclusao(sessaoAtiva);
         }
       } catch (error) {

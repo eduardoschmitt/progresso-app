@@ -28,13 +28,15 @@ export function TreinoQuestionCard({
         <Text style={styles.metaText}>Dificuldade real: nível {questao.dificuldade}</Text>
       </View>
 
-      <View style={styles.skillCard}>
-        <Text style={styles.skillTitle}>{questao.habilidadeAlvo.nome}</Text>
-        <Text style={styles.skillCode}>{questao.habilidadeAlvo.codigo}</Text>
-        <Text style={styles.skillDomain}>
-          Domínio atual estimado: {questao.habilidadeAlvo.dominio.toFixed(3)}
-        </Text>
-      </View>
+      {questao.habilidadeAlvo ? (
+        <View style={styles.skillCard}>
+          <Text style={styles.skillTitle}>{questao.habilidadeAlvo.nome}</Text>
+          <Text style={styles.skillCode}>{questao.habilidadeAlvo.codigo}</Text>
+          <Text style={styles.skillDomain}>
+            Domínio atual estimado: {questao.habilidadeAlvo.dominio.toFixed(3)}
+          </Text>
+        </View>
+      ) : null}
 
       <View style={styles.optionsList}>
         {questao.opcoes.map((opcao) => {
@@ -57,7 +59,7 @@ export function TreinoQuestionCard({
               disabled={isEnviandoResposta || isRespostaEnviada}
             >
               <Text style={[styles.optionButtonText, isSelecionada && styles.optionButtonTextSelected]}>
-                {opcao.descricao}
+                {opcao.rotulo}
               </Text>
             </Pressable>
           );

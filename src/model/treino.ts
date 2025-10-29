@@ -1,4 +1,4 @@
-import type { Opcao, TipoQuestao } from './quizzes';
+import type { TipoQuestao } from './quizzes';
 
 export type TreinoSessaoTipo = 'quiz' | 'reconhecimento_visual';
 
@@ -27,26 +27,47 @@ export type TreinoHabilidadeResumo = {
 
 export type TreinoQuestaoMetadados = Record<string, unknown>;
 
+export type TreinoQuestaoOpcao = {
+  id: string;
+  rotulo: string;
+  iconeUrl: string | null;
+};
+
 export type TreinoQuestaoPayload = {
   id: string;
   enunciado: string;
   descricao?: string | null;
-  tipoQuestao: TipoQuestao;
+  tipo: TipoQuestao;
   dificuldade: number;
   dificuldadeAlvo: number;
-  opcoes: Opcao[];
-  habilidadeAlvo: TreinoHabilidadeResumo;
+  opcoes: TreinoQuestaoOpcao[];
+  habilidadeAlvo?: TreinoHabilidadeResumo | null;
   metadados?: TreinoQuestaoMetadados;
 };
 
-export type TreinoProximaQuestaoPayload = {
+export type TreinoProximaQuestaoResponse = {
+  sessaoId: string;
+  questoesRespondidas: number;
+  totalQuestoes: number;
   status: TreinoSessaoStatus;
   reforcoEspacado: boolean;
-  progresso: TreinoSessaoProgresso;
-  questao?: TreinoQuestaoPayload | null;
+  questao?: {
+    id: string;
+    enunciado: string;
+    descricao?: string | null;
+    tipo: TipoQuestao;
+    dificuldade: number;
+    opcoes: TreinoQuestaoOpcao[];
+    metadados?: TreinoQuestaoMetadados;
+  } | null;
+  habilidadeAlvo?: TreinoHabilidadeResumo | null;
+  dificuldadeAlvo?: number | null;
 };
 
-export type TreinoRespostaHabilidadeDelta = TreinoHabilidadeResumo & {
+export type TreinoRespostaHabilidadeDelta = {
+  habilidadeId: string;
+  codigo: string;
+  nome: string;
   dominioAntes: number;
   dominioDepois: number;
   delta: number;

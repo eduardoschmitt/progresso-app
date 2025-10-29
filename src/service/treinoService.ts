@@ -1,7 +1,7 @@
 import { request, withAuthorization } from '@/api/httpClient';
 import type {
   TreinoConclusaoPayload,
-  TreinoProximaQuestaoPayload,
+  TreinoProximaQuestaoResponse,
   TreinoRespostaPayload,
   TreinoSessaoPayload,
   TreinoSessaoTipo,
@@ -24,7 +24,7 @@ export const criarSessaoTreino = (token: string, payload: CriarSessaoTreinoPaylo
   });
 
 export const buscarProximaQuestaoTreino = (token: string, sessaoId: string) =>
-  request<TreinoProximaQuestaoPayload>({
+  request<TreinoProximaQuestaoResponse>({
     url: `/api/treinos/sessoes/${sessaoId}/proxima`,
     method: 'GET',
     ...withAuthorization(token),

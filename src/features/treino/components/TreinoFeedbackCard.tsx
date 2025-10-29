@@ -30,7 +30,7 @@ export function TreinoFeedbackCard({
 
       <View style={styles.skillDeltaList}>
         {resposta.habilidades.map((habilidade) => (
-          <View key={habilidade.id} style={styles.skillDeltaItem}>
+          <View key={habilidade.habilidadeId} style={styles.skillDeltaItem}>
             <Text style={styles.skillDeltaTitle}>{habilidade.nome}</Text>
             <Text style={styles.skillDeltaText}>
               Domínio: {habilidade.dominioAntes.toFixed(3)} → {habilidade.dominioDepois.toFixed(3)} ({
