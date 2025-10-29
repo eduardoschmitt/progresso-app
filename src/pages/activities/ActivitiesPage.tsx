@@ -12,8 +12,22 @@ import {
 import CustomButton from '@/components/CustomButton';
 import { ApiError } from '@/api/httpClient';
 import { useAuth } from '@/hooks/use-auth';
-import type { TreinoCluster, TreinoSessaoPayload, TreinoSessaoTipo } from '@/model/treino';
-import { criarSessaoTreino } from '@/service/treinoService';
+import type {
+  TreinoCluster,
+  TreinoConclusaoPayload,
+  TreinoQuestaoPayload,
+  TreinoRespostaPayload,
+  TreinoSessaoPayload,
+  TreinoSessaoProgresso,
+  TreinoSessaoStatus,
+  TreinoSessaoTipo,
+} from '@/model/treino';
+import {
+  buscarProximaQuestaoTreino,
+  concluirSessaoTreino,
+  criarSessaoTreino,
+  enviarRespostaTreino,
+} from '@/service/treinoService';
 
 type Option<T> = {
   label: string;
@@ -64,6 +78,18 @@ export default function ActivitiesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sessaoCriada, setSessaoCriada] = useState<TreinoSessaoPayload | null>(null);
+  const [statusSessao, setStatusSessao] = useState<TreinoSessaoStatus | null>(null);
+  const [progressoSessao, setProgressoSessao] = useState<TreinoSessaoProgresso | null>(null);
+  const [reforcoEspacadoAtivo, setReforcoEspacadoAtivo] = useState(false);
+  const [questaoAtual, setQuestaoAtual] = useState<TreinoQuestaoPayload | null>(null);
+  const [isCarregandoQuestao, setIsCarregandoQuestao] = useState(false);
+  const [erroQuestao, setErroQuestao] = useState<string | null>(null);
+  const [opcaoSelecionadaId, setOpcaoSelecionadaId] = useState<string | null>(null);
+  const [isEnviandoResposta, setIsEnviandoResposta] = useState(false);
+  const [respostaRegistrada, setRespostaRegistrada] = useState<TreinoRespostaPayload | null>(null);
+  const [isConcluindo, setIsConcluindo] = useState(false);
+  const [conclusaoSessao, setConclusaoSessao] = useState<TreinoConclusaoPayload | null>(null);
+  const [erroConclusao, setErroConclusao] = useState<string | null>(null);
 
   const podeIniciar = useMemo(() => Boolean(session && session.user && session.token), [session]);
 
@@ -82,6 +108,92 @@ export default function ActivitiesPage() {
     });
   }, []);
 
+  const resetarEstadoSessao = useCallback(() => {
+    setStatusSessao(null);
+    setProgressoSessao(null);
+    setReforcoEspacadoAtivo(false);
+    setQuestaoAtual(null);
+    setErroQuestao(null);
+    setOpcaoSelecionadaId(null);
+    setIsEnviandoResposta(false);
+    setRespostaRegistrada(null);
+    setConclusaoSessao(null);
+    setErroConclusao(null);
+    setIsConcluindo(false);
+  }, []);
+
+  const confirmarConclusaoSessao = useCallback(async () => {
+    if (!session || !sessaoCriada) {
+      return;
+    }
+
+    if (conclusaoSessao || isConcluindo) {
+      return;
+    }
+
+    setIsConcluindo(true);
+    setErroConclusao(null);
+
+    try {
+      const payload = await concluirSessaoTreino(session.token, sessaoCriada.sessaoId);
+      setConclusaoSessao(payload);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErroConclusao(error.message);
+      } else {
+        setErroConclusao('Não foi possível concluir a sessão. Tente novamente.');
+      }
+    } finally {
+      setIsConcluindo(false);
+    }
+  }, [session, sessaoCriada, conclusaoSessao, isConcluindo]);
+
+  const carregarProximaQuestao = useCallback(
+    async (sessao?: TreinoSessaoPayload) => {
+      if (!session) {
+        return;
+      }
+
+      const sessaoAtiva = sessao ?? sessaoCriada;
+
+      if (!sessaoAtiva) {
+        return;
+      }
+
+      setIsCarregandoQuestao(true);
+      setErroQuestao(null);
+      setOpcaoSelecionadaId(null);
+      setRespostaRegistrada(null);
+
+      try {
+        const payload = await buscarProximaQuestaoTreino(session.token, sessaoAtiva.sessaoId);
+
+        setStatusSessao(payload.status);
+        setProgressoSessao(payload.progresso);
+        setReforcoEspacadoAtivo(payload.reforcoEspacado);
+
+        if (payload.questao) {
+          setQuestaoAtual(payload.questao);
+        } else {
+          setQuestaoAtual(null);
+        }
+
+        if (payload.status === 'concluida' && !payload.questao) {
+          await confirmarConclusaoSessao();
+        }
+      } catch (error) {
+        if (error instanceof ApiError) {
+          setErroQuestao(error.message);
+        } else {
+          setErroQuestao('Não foi possível carregar a próxima questão. Tente novamente.');
+        }
+      } finally {
+        setIsCarregandoQuestao(false);
+      }
+    },
+    [session, sessaoCriada, confirmarConclusaoSessao],
+  );
+
   const iniciarSessao = useCallback(async () => {
     if (!session) {
       return;
@@ -89,6 +201,7 @@ export default function ActivitiesPage() {
 
     setIsSubmitting(true);
     setErro(null);
+    resetarEstadoSessao();
 
     try {
       const payload = await criarSessaoTreino(session.token, {
@@ -99,6 +212,7 @@ export default function ActivitiesPage() {
       });
 
       setSessaoCriada(payload);
+      await carregarProximaQuestao(payload);
     } catch (error) {
       if (error instanceof ApiError) {
         setErro(error.message);
@@ -109,7 +223,70 @@ export default function ActivitiesPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [session, tipoSelecionado, clusterSelecionado, totalQuestoes]);
+  }, [
+    session,
+    tipoSelecionado,
+    clusterSelecionado,
+    totalQuestoes,
+    carregarProximaQuestao,
+    resetarEstadoSessao,
+  ]);
+
+  const enviarResposta = useCallback(
+    async (opcaoId: string) => {
+      if (!session || !sessaoCriada || !questaoAtual) {
+        return;
+      }
+
+      if (isEnviandoResposta || respostaRegistrada) {
+        return;
+      }
+
+      setIsEnviandoResposta(true);
+      setOpcaoSelecionadaId(opcaoId);
+      setErroQuestao(null);
+
+      try {
+        const payload = await enviarRespostaTreino(session.token, sessaoCriada.sessaoId, {
+          questaoId: questaoAtual.id,
+          opcaoId,
+        });
+
+        setRespostaRegistrada(payload);
+      } catch (error) {
+        setOpcaoSelecionadaId(null);
+        if (error instanceof ApiError) {
+          setErroQuestao(error.message);
+        } else {
+          setErroQuestao('Não foi possível registrar sua resposta. Tente novamente.');
+        }
+      } finally {
+        setIsEnviandoResposta(false);
+      }
+    },
+    [session, sessaoCriada, questaoAtual, isEnviandoResposta, respostaRegistrada],
+  );
+
+  const avancarOuConcluir = useCallback(async () => {
+    if (statusSessao === 'concluida') {
+      await confirmarConclusaoSessao();
+      return;
+    }
+
+    await carregarProximaQuestao();
+  }, [statusSessao, confirmarConclusaoSessao, carregarProximaQuestao]);
+
+  const progressoLabel = useMemo(() => {
+    if (!progressoSessao) {
+      return null;
+    }
+
+    return `${progressoSessao.respondidas}/${progressoSessao.total} questões respondidas`;
+  }, [progressoSessao]);
+
+  const podeAvancar = useMemo(() => Boolean(respostaRegistrada), [respostaRegistrada]);
+
+  const formatarDominio = useCallback((valor: number) => valor.toFixed(3), []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -117,8 +294,7 @@ export default function ActivitiesPage() {
         <View style={styles.header}>
           <Text style={styles.title}>Atividades</Text>
           <Text style={styles.subtitle}>
-            Configure e inicie um treino adaptativo para reforçar as habilidades que mais
-            precisam de atenção.
+            Configure e inicie um treino adaptativo para reforçar as habilidades que mais precisam de atenção.
           </Text>
         </View>
 
@@ -230,6 +406,167 @@ export default function ActivitiesPage() {
               <Text style={styles.resultLabel}>Total planejado: </Text>
               {sessaoCriada.totalQuestoes} questões
             </Text>
+            {statusSessao ? (
+              <Text style={styles.resultItem}>
+                <Text style={styles.resultLabel}>Status: </Text>
+                {statusSessao === 'concluida' ? 'Concluída' : 'Em andamento'}
+              </Text>
+            ) : null}
+            {progressoLabel ? (
+              <Text style={styles.resultItem}>
+                <Text style={styles.resultLabel}>Progresso: </Text>
+                {progressoLabel}
+              </Text>
+            ) : null}
+            {reforcoEspacadoAtivo ? (
+              <Text style={styles.resultHighlight}>
+                Modo reforço espaçado ativo para esta questão.
+              </Text>
+            ) : null}
+            {erroQuestao ? <Text style={styles.errorText}>{erroQuestao}</Text> : null}
+            {isCarregandoQuestao ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator color="#1D4ED8" />
+                <Text style={styles.loadingText}>Buscando próxima questão...</Text>
+              </View>
+            ) : null}
+            {questaoAtual ? (
+              <View style={styles.questionCard}>
+                <Text style={styles.questionTitle}>{questaoAtual.enunciado}</Text>
+                {questaoAtual.descricao ? (
+                  <Text style={styles.questionDescription}>{questaoAtual.descricao}</Text>
+                ) : null}
+                <View style={styles.questionMeta}>
+                  <Text style={styles.questionMetaText}>
+                    Dificuldade sugerida: nível {questaoAtual.dificuldadeAlvo}
+                  </Text>
+                  <Text style={styles.questionMetaText}>
+                    Dificuldade real: nível {questaoAtual.dificuldade}
+                  </Text>
+                </View>
+                <View style={styles.skillCard}>
+                  <Text style={styles.skillTitle}>{questaoAtual.habilidadeAlvo.nome}</Text>
+                  <Text style={styles.skillCode}>{questaoAtual.habilidadeAlvo.codigo}</Text>
+                  <Text style={styles.skillDomain}>
+                    Domínio atual estimado: {formatarDominio(questaoAtual.habilidadeAlvo.dominio)}
+                  </Text>
+                </View>
+                <View style={styles.optionsList}>
+                  {questaoAtual.opcoes.map((opcao) => {
+                    const isSelecionada = opcaoSelecionadaId === opcao.id;
+                    const isRespostaEnviada = Boolean(respostaRegistrada);
+                    const isCorreta =
+                      isRespostaEnviada && isSelecionada && respostaRegistrada?.correta === true;
+                    const isIncorreta =
+                      isRespostaEnviada && isSelecionada && respostaRegistrada?.correta === false;
+
+                    return (
+                      <Pressable
+                        key={opcao.id}
+                        onPress={() => enviarResposta(opcao.id)}
+                        style={[
+                          styles.optionButton,
+                          isSelecionada && styles.optionButtonSelected,
+                          isCorreta && styles.optionButtonCorrect,
+                          isIncorreta && styles.optionButtonIncorrect,
+                          (isEnviandoResposta || isRespostaEnviada) && styles.optionButtonDisabled,
+                        ]}
+                        disabled={isEnviandoResposta || isRespostaEnviada}
+                      >
+                        <Text
+                          style={[
+                            styles.optionButtonText,
+                            isSelecionada && styles.optionButtonTextSelected,
+                          ]}
+                        >
+                          {opcao.descricao}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : null}
+            {respostaRegistrada ? (
+              <View style={styles.feedbackCard}>
+                <Text
+                  style={[
+                    styles.feedbackTitle,
+                    respostaRegistrada.correta
+                      ? styles.feedbackTitleSuccess
+                      : styles.feedbackTitleError,
+                  ]}
+                >
+                  {respostaRegistrada.correta ? 'Resposta correta!' : 'Resposta incorreta.'}
+                </Text>
+                <Text style={styles.feedbackMessage}>{respostaRegistrada.feedback}</Text>
+                {respostaRegistrada.microdica ? (
+                  <Text style={styles.feedbackHint}>{respostaRegistrada.microdica}</Text>
+                ) : null}
+                <View style={styles.skillDeltaList}>
+                  {respostaRegistrada.habilidades.map((habilidade) => (
+                    <View key={habilidade.id} style={styles.skillDeltaItem}>
+                      <Text style={styles.skillDeltaTitle}>{habilidade.nome}</Text>
+                      <Text style={styles.skillDeltaText}>
+                        Domínio: {formatarDominio(habilidade.dominioAntes)} → {formatarDominio(habilidade.dominioDepois)} ({
+                          habilidade.delta > 0 ? '+' : ''
+                        }
+                        {formatarDominio(habilidade.delta)})
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+                {respostaRegistrada.proximaRevisaoEm ? (
+                  <Text style={styles.nextReviewText}>
+                    Próxima revisão recomendada em: {respostaRegistrada.proximaRevisaoEm}
+                  </Text>
+                ) : null}
+                <CustomButton
+                  title={statusSessao === 'concluida' ? 'Finalizar sessão' : 'Avançar para a próxima'}
+                  onPress={avancarOuConcluir}
+                  disabled={!podeAvancar || isCarregandoQuestao || isConcluindo}
+                  style={styles.nextButton}
+                  textStyle={styles.nextButtonText}
+                />
+              </View>
+            ) : null}
+            {statusSessao === 'concluida' && conclusaoSessao ? (
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryTitle}>Sessão concluída</Text>
+                <Text style={styles.summaryText}>
+                  Total planejado: {conclusaoSessao.totalQuestoesPlanejado} questões
+                </Text>
+                <Text style={styles.summaryText}>
+                  Respondidas: {conclusaoSessao.totalRespondidas}
+                </Text>
+                <Text style={styles.summaryText}>
+                  Corretas: {conclusaoSessao.totalCorretas}
+                </Text>
+                <Text style={styles.summaryText}>
+                  Pontuação: {Math.round(conclusaoSessao.pontuacao)}%
+                </Text>
+                <Text style={styles.summaryText}>Concluído em: {conclusaoSessao.concluidoEm}</Text>
+                {conclusaoSessao.novasInsignias.length > 0 ? (
+                  <View style={styles.badgeList}>
+                    <Text style={styles.badgeTitle}>Novas insignias:</Text>
+                    {conclusaoSessao.novasInsignias.map((badge, index) => {
+                      const nomeInsignia =
+                        badge && typeof badge['nome'] === 'string'
+                          ? (badge['nome'] as string)
+                          : `Conquista #${index + 1}`;
+                      return (
+                        <Text key={index} style={styles.badgeItem}>
+                          {nomeInsignia}
+                        </Text>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <Text style={styles.badgeEmpty}>Nenhuma nova insignia desta vez.</Text>
+                )}
+              </View>
+            ) : null}
+            {erroConclusao ? <Text style={styles.errorText}>{erroConclusao}</Text> : null}
           </View>
         ) : null}
       </ScrollView>
@@ -374,7 +711,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0ECFF',
     padding: 20,
     borderRadius: 16,
-    gap: 8,
+    gap: 12,
   },
   resultTitle: {
     fontSize: 18,
@@ -387,5 +724,178 @@ const styles = StyleSheet.create({
   },
   resultLabel: {
     fontWeight: '600',
+  },
+  resultHighlight: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1D4ED8',
+  },
+  questionCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 20,
+    gap: 16,
+    borderWidth: 1,
+    borderColor: '#CBD5F5',
+  },
+  questionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  questionDescription: {
+    fontSize: 15,
+    lineHeight: 21,
+    color: '#475569',
+  },
+  questionMeta: {
+    gap: 4,
+  },
+  questionMetaText: {
+    fontSize: 13,
+    color: '#334155',
+  },
+  skillCard: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: 12,
+    padding: 12,
+    gap: 4,
+  },
+  skillTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1D4ED8',
+  },
+  skillCode: {
+    fontSize: 13,
+    color: '#475569',
+  },
+  skillDomain: {
+    fontSize: 13,
+    color: '#0F172A',
+  },
+  optionsList: {
+    gap: 12,
+  },
+  optionButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  optionButtonSelected: {
+    borderColor: '#2563EB',
+    backgroundColor: '#EFF6FF',
+  },
+  optionButtonCorrect: {
+    borderColor: '#16A34A',
+    backgroundColor: '#DCFCE7',
+  },
+  optionButtonIncorrect: {
+    borderColor: '#DC2626',
+    backgroundColor: '#FEE2E2',
+  },
+  optionButtonDisabled: {
+    opacity: 0.7,
+  },
+  optionButtonText: {
+    fontSize: 15,
+    color: '#0F172A',
+  },
+  optionButtonTextSelected: {
+    fontWeight: '600',
+    color: '#1D4ED8',
+  },
+  feedbackCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  feedbackTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  feedbackTitleSuccess: {
+    color: '#16A34A',
+  },
+  feedbackTitleError: {
+    color: '#DC2626',
+  },
+  feedbackMessage: {
+    fontSize: 15,
+    color: '#0F172A',
+  },
+  feedbackHint: {
+    fontSize: 14,
+    color: '#1D4ED8',
+  },
+  skillDeltaList: {
+    gap: 12,
+  },
+  skillDeltaItem: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 4,
+  },
+  skillDeltaTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  skillDeltaText: {
+    fontSize: 13,
+    color: '#334155',
+  },
+  nextReviewText: {
+    fontSize: 13,
+    color: '#475569',
+  },
+  nextButton: {
+    marginTop: 8,
+    backgroundColor: '#1D4ED8',
+  },
+  nextButtonText: {
+    color: '#FFFFFF',
+  },
+  summaryCard: {
+    backgroundColor: '#E0ECFF',
+    borderRadius: 16,
+    padding: 20,
+    gap: 8,
+  },
+  summaryTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1D4ED8',
+  },
+  summaryText: {
+    fontSize: 14,
+    color: '#0F172A',
+  },
+  badgeList: {
+    marginTop: 12,
+    gap: 6,
+  },
+  badgeTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1D4ED8',
+  },
+  badgeItem: {
+    fontSize: 13,
+    color: '#0F172A',
+  },
+  badgeEmpty: {
+    marginTop: 12,
+    fontSize: 13,
+    color: '#475569',
   },
 });
