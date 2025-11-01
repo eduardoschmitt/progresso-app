@@ -1,4 +1,4 @@
-import { request, withAuthorization } from '@/api/httpClient';
+import { apiConfig, request, withAuthorization } from '@/api/httpClient';
 import type {
   Habit,
   HabitCreateInput,
@@ -30,6 +30,56 @@ const sanitizePayload = <T extends Record<string, unknown>>(payload: T): T => {
   return Object.fromEntries(entries) as T;
 };
 
+type WithIconUrl = { iconeUrl?: string | null };
+
+const asPngPath = (path: string): string => {
+  if (/\.png(\?.*)?$/i.test(path)) {
+    return path;
+  }
+
+  if (/\.svg(\?.*)?$/i.test(path)) {
+    return path.replace(/\.svg(\?.*)?$/i, (_match, query = '') => `.png${query}`);
+  }
+
+  return path;
+};
+
+const toAbsoluteUrl = (path: string): string => {
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
+  const base = apiConfig.baseUrl?.replace(/\/$/, '') ?? '';
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${normalizedPath}`;
+};
+
+const resolveHabitIconUrl = (value?: string | null): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const pngPath = asPngPath(value);
+  return toAbsoluteUrl(pngPath);
+};
+
+const mapIconUrl = <T extends WithIconUrl>(input: T): T => {
+  const resolved = resolveHabitIconUrl(input.iconeUrl);
+
+  if (resolved === input.iconeUrl) {
+    return input;
+  }
+
+  return { ...input, iconeUrl: resolved };
+};
+
+const mapHabit = (habit: Habit): Habit => mapIconUrl(habit);
+
+const mapRecommendation = (recommendation: HabitRecommendation): HabitRecommendation =>
+  mapIconUrl(recommendation);
+
+const mapHabitIcon = (icon: HabitIcon): HabitIcon => mapIconUrl(icon);
+
 export const createHabit = async (input: HabitCreateInput): Promise<Habit> => {
   const { token, usuarioId: sessionUserId } = await ensureAuth();
   const usuarioId = input.usuarioId ?? sessionUserId;
@@ -46,12 +96,14 @@ export const createHabit = async (input: HabitCreateInput): Promise<Habit> => {
     iconeCodigo: input.iconeCodigo ?? null,
   });
 
-  return request<Habit>({
+  const response = await request<Habit>({
     url: '/api/habitos',
     method: 'POST',
     data: payload,
     ...withAuthorization(token),
   });
+
+  return mapHabit(response);
 };
 
 export const listHabits = async (params: HabitListParams = {}): Promise<Habit[]> => {
@@ -69,11 +121,13 @@ export const listHabits = async (params: HabitListParams = {}): Promise<Habit[]>
     sp.set('incluirInativos', String(params.incluirInativos));
   }
 
-  return request<Habit[]>({
+  const response = await request<Habit[]>({
     url: `/api/habitos?${sp.toString()}`,
     method: 'GET',
     ...withAuthorization(token),
   });
+
+  return response.map(mapHabit);
 };
 
 export const getHabitById = async (habitId: string): Promise<Habit> => {
@@ -83,11 +137,13 @@ export const getHabitById = async (habitId: string): Promise<Habit> => {
 
   const { token } = await ensureAuth();
 
-  return request<Habit>({
+  const response = await request<Habit>({
     url: `/api/habitos/${habitId}`,
     method: 'GET',
     ...withAuthorization(token),
   });
+
+  return mapHabit(response);
 };
 
 export const getHabitRecommendations = async (
@@ -109,7 +165,8 @@ export const getHabitRecommendations = async (
     ...withAuthorization(token),
   });
 
-  return Array.isArray(response.habitos) ? response.habitos : [];
+  const list = Array.isArray(response.habitos) ? response.habitos : [];
+  return list.map(mapRecommendation);
 };
 
 export const markHabit = async (
@@ -124,12 +181,14 @@ export const markHabit = async (
 
   const data = opts.quantidade ? { quantidade: opts.quantidade } : undefined;
 
-  return request<Habit>({
+  const response = await request<Habit>({
     url: `/api/habitos/${habitId}/marcar`,
     method: 'POST',
     data,
     ...withAuthorization(token),
   });
+
+  return mapHabit(response);
 };
 
 export const unmarkHabit = async (
@@ -144,12 +203,14 @@ export const unmarkHabit = async (
 
   const data = opts.quantidade ? { quantidade: opts.quantidade } : undefined;
 
-  return request<Habit>({
+  const response = await request<Habit>({
     url: `/api/habitos/${habitId}/desmarcar`,
     method: 'POST',
     data,
     ...withAuthorization(token),
   });
+
+  return mapHabit(response);
 };
 
 export const updateHabit = async (
@@ -164,12 +225,14 @@ export const updateHabit = async (
 
   const data = sanitizePayload(payload);
 
-  return request<Habit>({
+  const response = await request<Habit>({
     url: `/api/habitos/${habitId}`,
     method: 'PATCH',
     data,
     ...withAuthorization(token),
   });
+
+  return mapHabit(response);
 };
 
 export const deleteHabit = async (habitId: string): Promise<void> => {
@@ -189,9 +252,11 @@ export const deleteHabit = async (habitId: string): Promise<void> => {
 export const getHabitIcons = async (): Promise<HabitIcon[]> => {
   const { token } = await ensureAuth();
 
-  return request<HabitIcon[]>({
+  const response = await request<HabitIcon[]>({
     url: '/api/habitos/icones',
     method: 'GET',
     ...withAuthorization(token),
   });
+
+  return response.map(mapHabitIcon);
 };
