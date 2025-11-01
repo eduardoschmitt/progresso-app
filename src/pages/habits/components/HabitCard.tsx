@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#2563EB',
+    backgroundColor: '#F9B817',
   },
   progressMeta: {
     flexDirection: 'row',
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
   progressHint: {
-    color: '#1D4ED8',
+    color: '#F9B817',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     flex: 1,
-    backgroundColor: '#2563EB',
+    backgroundColor: '#F9B817',
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
@@ -304,14 +304,14 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#CBD5F5',
-    backgroundColor: '#F8FAFC',
+    borderColor: '#FDE68A',
+    backgroundColor: '#FFFBEB',
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondaryButtonText: {
-    color: '#1D4ED8',
+    color: '#B45309',
     fontWeight: '600',
   },
   footerActions: {
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   link: {
-    color: '#1D4ED8',
+    color: '#F9B817',
     fontWeight: '600',
   },
   deleteLink: {

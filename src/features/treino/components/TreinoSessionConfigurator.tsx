@@ -176,8 +176,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   optionCardSelected: {
-    borderColor: '#2563EB',
-    backgroundColor: '#E0ECFF',
+    borderColor: '#F9B817',
+    backgroundColor: '#FFF4CC',
   },
   optionTitle: {
     fontSize: 16,
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
   optionTitleSelected: {
-    color: '#1D4ED8',
+    color: '#F9B817',
   },
   optionDescription: {
     fontSize: 14,
@@ -205,10 +205,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1D4ED8',
+    backgroundColor: '#F9B817',
   },
   counterButtonDisabled: {
-    backgroundColor: '#CBD5F5',
+    backgroundColor: '#FDE68A',
   },
   counterButtonText: {
     fontSize: 20,

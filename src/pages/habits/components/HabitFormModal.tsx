@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
   },
   iconOptionSelected: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#F9B817',
   },
   iconOptionText: {
     color: '#1E293B',
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   primaryButton: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#F9B817',
     borderRadius: 12,
     paddingHorizontal: 18,
     paddingVertical: 12,

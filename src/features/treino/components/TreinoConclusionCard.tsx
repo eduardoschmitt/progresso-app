@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1D4ED8',
+    color: '#F9B817',
   },
   text: {
     fontSize: 14,
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   badgeTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1D4ED8',
+    color: '#F9B817',
   },
   badgeItem: {
     fontSize: 13,

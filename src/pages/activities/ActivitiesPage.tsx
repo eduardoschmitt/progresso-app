@@ -81,7 +81,7 @@ export default function ActivitiesPage() {
 
         {state.isInicializando ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator color="#1D4ED8" />
+            <ActivityIndicator color="#F9B817" />
             <Text style={styles.loadingText}>Preparando sua sessão...</Text>
           </View>
         ) : null}
@@ -144,6 +144,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: '#1D4ED8',
+    color: '#F9B817',
   },
 });

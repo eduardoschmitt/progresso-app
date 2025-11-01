@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     color: '#334155',
   },
   skillCard: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#FFF7D6',
     borderRadius: 12,
     padding: 12,
     gap: 4,
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   skillTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1D4ED8',
+    color: '#F9B817',
   },
   skillCode: {
     fontSize: 13,
@@ -126,8 +126,8 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   optionButtonSelected: {
-    borderColor: '#2563EB',
-    backgroundColor: '#EFF6FF',
+    borderColor: '#F9B817',
+    backgroundColor: '#FFF4CC',
   },
   optionButtonCorrect: {
     borderColor: '#16A34A',
@@ -146,6 +146,6 @@ const styles = StyleSheet.create({
   },
   optionButtonTextSelected: {
     fontWeight: '600',
-    color: '#1D4ED8',
+    color: '#F9B817',
   },
 });

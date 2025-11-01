@@ -92,7 +92,7 @@ export function TreinoSessionOverview({
       {erroQuestao ? <Text style={styles.errorText}>{erroQuestao}</Text> : null}
       {isCarregandoQuestao ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator color="#1D4ED8" />
+          <ActivityIndicator color="#F9B817" />
           <Text style={styles.loadingText}>Buscando próxima questão...</Text>
         </View>
       ) : null}
@@ -126,7 +126,7 @@ export function TreinoSessionOverview({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#E0ECFF',
+    backgroundColor: '#FFF4CC',
     padding: 20,
     borderRadius: 16,
     gap: 16,
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   resultTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1D4ED8',
+    color: '#F9B817',
   },
   resultItem: {
     fontSize: 14,
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   resultHighlight: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1D4ED8',
+    color: '#F9B817',
   },
   errorText: {
     color: '#B91C1C',
@@ -162,6 +162,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: '#1D4ED8',
+    color: '#F9B817',
   },
 });

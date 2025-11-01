@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   },
   feedbackHint: {
     fontSize: 14,
-    color: '#1D4ED8',
+    color: '#F9B817',
   },
   skillDeltaList: {
     gap: 12,
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   },
   nextButton: {
     marginTop: 8,
-    backgroundColor: '#1D4ED8',
+    backgroundColor: '#F9B817',
   },
   nextButtonText: {
     color: '#FFFFFF',
