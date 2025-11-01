@@ -337,7 +337,7 @@ export default function HabitsPage() {
 
         {isLoading ? (
           <View style={styles.loading}>
-            <ActivityIndicator color="#2563EB" />
+            <ActivityIndicator color="#F9B817" />
             <Text style={styles.loadingText}>Buscando seus hábitos...</Text>
           </View>
         ) : null}
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
   },
   createButton: {
     alignSelf: 'flex-start',
-    backgroundColor: '#2563EB',
+    backgroundColor: '#F9B817',
     paddingHorizontal: 18,
     paddingVertical: 12,
     borderRadius: 12,
@@ -447,10 +447,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEE2E2',
   },
   toastInfo: {
-    backgroundColor: '#DBEAFE',
+    backgroundColor: '#FEF9C3',
   },
   callout: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: '#FFF4CC',
     borderRadius: 20,
     padding: 20,
     gap: 8,
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
   },
   calloutSubtitle: {
     fontSize: 14,
-    color: '#1D4ED8',
+    color: '#B45309',
   },
   errorCard: {
     backgroundColor: '#FEE2E2',
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
-    color: '#2563EB',
+    color: '#F9B817',
     fontWeight: '600',
   },
   list: {
