@@ -1,7 +1,9 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 
 import type { TreinoQuestaoPayload, TreinoRespostaPayload } from '@/model/treino';
+import { resolveIconUrl } from '@/utils/iconUrl';
 
 type TreinoQuestionCardProps = {
   questao: TreinoQuestaoPayload;
@@ -40,10 +42,13 @@ export function TreinoQuestionCard({
 
       <View style={styles.optionsList}>
         {questao.opcoes.map((opcao) => {
+          const label = opcao.rotulo ?? '';
           const isSelecionada = opcaoSelecionadaId === opcao.id;
           const isRespostaEnviada = Boolean(respostaRegistrada);
           const isCorreta = isRespostaEnviada && isSelecionada && respostaRegistrada?.correta === true;
           const isIncorreta = isRespostaEnviada && isSelecionada && respostaRegistrada?.correta === false;
+          const iconUri = resolveIconUrl(opcao.iconeUrl);
+          const fallbackInitial = label.trim().charAt(0).toUpperCase() || '?';
 
           return (
             <Pressable
@@ -58,9 +63,21 @@ export function TreinoQuestionCard({
               ]}
               disabled={isEnviandoResposta || isRespostaEnviada}
             >
-              <Text style={[styles.optionButtonText, isSelecionada && styles.optionButtonTextSelected]}>
-                {opcao.rotulo}
-              </Text>
+              <View style={styles.optionButtonContent}>
+                {iconUri ? (
+                  <Image source={{ uri: iconUri }} style={styles.optionButtonIcon} contentFit="contain" />
+                ) : (
+                  <View style={styles.optionButtonIconFallback}>
+                    <Text style={styles.optionButtonIconFallbackText}>{fallbackInitial}</Text>
+                  </View>
+                )}
+                <Text
+                  style={[styles.optionButtonText, isSelecionada && styles.optionButtonTextSelected]}
+                  numberOfLines={2}
+                >
+                  {label}
+                </Text>
+              </View>
             </Pressable>
           );
         })}
@@ -125,6 +142,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
+  optionButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  optionButtonIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    overflow: 'hidden',
+  },
+  optionButtonIconFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionButtonIconFallbackText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
   optionButtonSelected: {
     borderColor: '#F9B817',
     backgroundColor: '#FFF4CC',
@@ -143,6 +185,7 @@ const styles = StyleSheet.create({
   optionButtonText: {
     fontSize: 15,
     color: '#0F172A',
+    flex: 1,
   },
   optionButtonTextSelected: {
     fontWeight: '600',

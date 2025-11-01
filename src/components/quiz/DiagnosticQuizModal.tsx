@@ -10,11 +10,13 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 
 import CustomButton from '@/components/CustomButton';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useDiagnosticQuiz } from '@/hooks/use-diagnostic-quiz';
+import { resolveIconUrl } from '@/utils/iconUrl';
 
 export default function DiagnosticQuizModal() {
   const colorScheme = useColorScheme();
@@ -139,6 +141,9 @@ export default function DiagnosticQuizModal() {
                   {question.opcoes.map((option) => {
                     const isSelected = questionAnswer === option.id;
                     const isDisabled = isSaving || isFinalizing || savingQuestionId === question.id;
+                    const label = option.rotulo ?? '';
+                    const iconUri = resolveIconUrl(option.iconeUrl);
+                    const fallbackInitial = label.trim().charAt(0).toUpperCase() || '?';
 
                     return (
                       <TouchableOpacity
@@ -150,9 +155,26 @@ export default function DiagnosticQuizModal() {
                         accessibilityState={{ selected: isSelected, disabled: isDisabled }}
                       >
                         <View style={styles.optionContent}>
-                          <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
-                            {option.rotulo}
-                          </Text>
+                          <View style={styles.optionInfo}>
+                            {iconUri ? (
+                              <Image
+                                source={{ uri: iconUri }}
+                                style={styles.optionIcon}
+                                contentFit="contain"
+                              />
+                            ) : (
+                              <View style={styles.optionIconFallback}>
+                                <Text style={styles.optionIconFallbackText}>{fallbackInitial}</Text>
+                              </View>
+                            )}
+
+                            <Text
+                              style={[styles.optionText, isSelected && styles.optionTextSelected]}
+                              numberOfLines={2}
+                            >
+                              {label}
+                            </Text>
+                          </View>
                           {isSelected && <Ionicons name="checkmark-circle" size={24} color={themeColors.tint} />}
                         </View>
                       </TouchableOpacity>
@@ -327,6 +349,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
+  },
+  optionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  optionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    overflow: 'hidden',
+  },
+  optionIconFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionIconFallbackText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
   },
   optionText: {
     fontSize: 16,
