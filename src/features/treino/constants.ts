@@ -1,9 +1,12 @@
+import type { ImageSourcePropType } from 'react-native';
+
 import type { TreinoCluster, TreinoSessaoTipo } from '@/model/treino';
 
 export type TreinoOption<T> = {
   label: string;
   description: string;
   value: T;
+  imageSource?: ImageSourcePropType;
 };
 
 export const TIPO_OPTIONS: TreinoOption<TreinoSessaoTipo>[] = [

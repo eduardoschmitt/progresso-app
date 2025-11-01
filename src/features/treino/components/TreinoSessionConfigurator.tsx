@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import CustomButton from '@/components/CustomButton';
 import type { TreinoCluster, TreinoSessaoTipo } from '@/model/treino';
@@ -55,10 +55,17 @@ export function TreinoSessionConfigurator({
                 style={[styles.optionCard, isSelected && styles.optionCardSelected]}
                 onPress={() => onSelectTipo(option.value)}
               >
-                <Text style={[styles.optionTitle, isSelected && styles.optionTitleSelected]}>
-                  {option.label}
-                </Text>
-                <Text style={styles.optionDescription}>{option.description}</Text>
+                <View style={styles.optionContent}>
+                  {option.imageSource ? (
+                    <Image source={option.imageSource} style={styles.optionImage} resizeMode="cover" />
+                  ) : null}
+                  <View style={styles.optionTextContainer}>
+                    <Text style={[styles.optionTitle, isSelected && styles.optionTitleSelected]}>
+                      {option.label}
+                    </Text>
+                    <Text style={styles.optionDescription}>{option.description}</Text>
+                  </View>
+                </View>
               </Pressable>
             );
           })}
@@ -75,10 +82,17 @@ export function TreinoSessionConfigurator({
                 style={[styles.optionCard, isSelected && styles.optionCardSelected]}
                 onPress={() => onSelectCluster(option.value)}
               >
-                <Text style={[styles.optionTitle, isSelected && styles.optionTitleSelected]}>
-                  {option.label}
-                </Text>
-                <Text style={styles.optionDescription}>{option.description}</Text>
+                <View style={styles.optionContent}>
+                  {option.imageSource ? (
+                    <Image source={option.imageSource} style={styles.optionImage} resizeMode="cover" />
+                  ) : null}
+                  <View style={styles.optionTextContainer}>
+                    <Text style={[styles.optionTitle, isSelected && styles.optionTitleSelected]}>
+                      {option.label}
+                    </Text>
+                    <Text style={styles.optionDescription}>{option.description}</Text>
+                  </View>
+                </View>
               </Pressable>
             );
           })}
@@ -173,11 +187,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
     backgroundColor: '#F8FAFC',
-    gap: 4,
   },
   optionCardSelected: {
     borderColor: '#F9B817',
     backgroundColor: '#FFF4CC',
+  },
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  optionImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+  },
+  optionTextContainer: {
+    flex: 1,
+    gap: 4,
   },
   optionTitle: {
     fontSize: 16,
