@@ -14,11 +14,13 @@ export const TIPO_OPTIONS: TreinoOption<TreinoSessaoTipo>[] = [
     label: 'Quiz adaptativo',
     description: 'Questões de múltipla escolha com ajuste dinâmico de dificuldade.',
     value: 'quiz',
+    imageSource: require('../../../assets/treinos/quiz_adaptativo.png'),
   },
   {
     label: 'Reconhecimento visual',
     description: 'Classifique imagens para reforçar padrões visuais essenciais.',
     value: 'reconhecimento_visual',
+    imageSource: require('../../../assets/treinos/reconhecimento_visual.png'),
   },
 ];
 
