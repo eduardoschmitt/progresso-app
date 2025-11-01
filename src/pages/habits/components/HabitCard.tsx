@@ -1,12 +1,7 @@
 import type { Habit } from '@/model/habits';
 import React, { useMemo } from 'react';
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Image } from 'expo-image';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const formatDateTime = (value: string | null) => {
   if (!value) {
@@ -52,14 +47,18 @@ export function HabitCard({
   const percentual = Math.round(progress * 100);
   const restante = Math.max(habit.metaDiaria - habit.contagemHoje, 0);
   const ultimaMarcacao = formatDateTime(habit.ultimaMarcacaoEm);
+  const iconUri = habit.iconeUrl ?? null;
+  const iconFallback = (habit.iconeNome ?? habit.nome ?? '?').slice(0, 2).toUpperCase();
 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.iconPlaceholder}>
-          <Text style={styles.iconText}>
-            {(habit.iconeCodigo ?? habit.nome ?? '?').slice(0, 2).toUpperCase()}
-          </Text>
+          {iconUri ? (
+            <Image source={{ uri: iconUri }} style={styles.iconImage} contentFit="contain" />
+          ) : (
+            <Text style={styles.iconText}>{iconFallback}</Text>
+          )}
         </View>
         <View style={styles.headerContent}>
           <View style={styles.titleRow}>
@@ -176,6 +175,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  iconImage: {
+    width: '100%',
+    height: '100%',
   },
   iconText: {
     fontWeight: '700',

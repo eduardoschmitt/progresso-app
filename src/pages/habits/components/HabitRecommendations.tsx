@@ -1,5 +1,6 @@
 import type { HabitRecommendation } from '@/model/habits';
 import React from 'react';
+import { Image } from 'expo-image';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type HabitRecommendationsProps = {
@@ -30,6 +31,21 @@ export function HabitRecommendations({ recommendations, onAdopt }: HabitRecommen
           <View key={recommendation.modeloId} style={styles.card}>
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{recommendation.categoria}</Text>
+            </View>
+            <View style={styles.cardIconWrapper}>
+              {recommendation.iconeUrl ? (
+                <Image
+                  source={{ uri: recommendation.iconeUrl }}
+                  style={styles.cardIcon}
+                  contentFit="contain"
+                />
+              ) : (
+                <View style={styles.cardIconFallback}>
+                  <Text style={styles.cardIconFallbackText}>
+                    {recommendation.iconeNome.slice(0, 2).toUpperCase()}
+                  </Text>
+                </View>
+              )}
             </View>
             <Text style={styles.cardTitle}>{recommendation.metadados?.titulo ?? recommendation.iconeNome}</Text>
             <Text style={styles.cardSubtitle}>{recommendation.habilidadeNome}</Text>
@@ -100,6 +116,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#0F172A',
+  },
+  cardIconWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    alignSelf: 'flex-start',
+  },
+  cardIcon: {
+    width: '100%',
+    height: '100%',
+  },
+  cardIconFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardIconFallbackText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1E293B',
   },
   cardSubtitle: {
     fontSize: 14,

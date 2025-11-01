@@ -1,5 +1,6 @@
 import type { HabitIcon } from '@/model/habits';
 import React, { useEffect, useMemo, useState } from 'react';
+import { Image } from 'expo-image';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -189,12 +190,27 @@ export function HabitFormModal({
               >
                 {icons.map((icon) => {
                   const isSelected = icon.codigo === iconeCodigo;
+                  const iconUri = icon.iconeUrl ?? null;
+                  const fallback = icon.nome.slice(0, 2).toUpperCase();
                   return (
                     <TouchableOpacity
                       key={icon.codigo}
                       style={[styles.iconOption, isSelected && styles.iconOptionSelected]}
                       onPress={() => setIconeCodigo(isSelected ? null : icon.codigo)}
                     >
+                      <View style={styles.iconImageWrapper}>
+                        {iconUri ? (
+                          <Image
+                            source={{ uri: iconUri }}
+                            style={styles.iconImage}
+                            contentFit="contain"
+                          />
+                        ) : (
+                          <View style={styles.iconFallback}>
+                            <Text style={styles.iconFallbackText}>{fallback}</Text>
+                          </View>
+                        )}
+                      </View>
                       <Text style={[styles.iconOptionText, isSelected && styles.iconOptionTextSelected]}>
                         {icon.nome}
                       </Text>
@@ -202,11 +218,22 @@ export function HabitFormModal({
                   );
                 })}
               </ScrollView>
-              {selectedIcon ? (
-                <Text style={styles.iconDescription}>{selectedIcon.descricao}</Text>
-              ) : (
-                <Text style={styles.iconDescription}>Selecione um ícone que represente seu hábito.</Text>
-              )}
+              <View style={styles.iconDetails}>
+                {selectedIcon?.iconeUrl ? (
+                  <View style={styles.iconPreview}>
+                    <Image
+                      source={{ uri: selectedIcon.iconeUrl }}
+                      style={styles.iconPreviewImage}
+                      contentFit="contain"
+                    />
+                  </View>
+                ) : null}
+                <Text style={styles.iconDescription}>
+                  {selectedIcon
+                    ? selectedIcon.descricao
+                    : 'Selecione um ícone que represente seu hábito.'}
+                </Text>
+              </View>
             </View>
 
             {helperText && (localError || errorMessage) ? (
@@ -307,25 +334,75 @@ const styles = StyleSheet.create({
   },
   iconList: {
     gap: 12,
+    paddingVertical: 4,
   },
   iconOption: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: '#F1F5F9',
+    width: 96,
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#CBD5F5',
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    gap: 8,
   },
   iconOptionSelected: {
-    backgroundColor: '#F9B817',
+    borderColor: '#F9B817',
+    backgroundColor: 'rgba(249, 184, 23, 0.16)',
+  },
+  iconImageWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  iconImage: {
+    width: '100%',
+    height: '100%',
+  },
+  iconFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E2E8F0',
+  },
+  iconFallbackText: {
+    fontWeight: '700',
+    color: '#1E293B',
   },
   iconOptionText: {
     color: '#1E293B',
     fontWeight: '600',
+    textAlign: 'center',
   },
   iconOptionTextSelected: {
-    color: '#FFFFFF',
+    color: '#B45309',
+  },
+  iconDetails: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  iconPreview: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  iconPreviewImage: {
+    width: '100%',
+    height: '100%',
   },
   iconDescription: {
-    marginTop: 8,
+    flex: 1,
     fontSize: 12,
     color: '#475569',
   },
