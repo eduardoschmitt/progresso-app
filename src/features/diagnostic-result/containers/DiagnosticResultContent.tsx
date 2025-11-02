@@ -34,13 +34,6 @@ export function DiagnosticResultContent() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Diagnóstico concluído</Text>
-            <Text style={styles.subtitle}>
-              Confira seu desempenho e os pontos de atenção para acelerar sua jornada sustentável.
-            </Text>
-          </View>
-
           <ResultSummaryCard summary={viewModel.summary} />
 
           <View style={styles.sectionList}>
@@ -78,19 +71,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     gap: 24,
-  },
-  header: {
-    gap: 12,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  subtitle: {
-    fontSize: 16,
-    lineHeight: 22,
-    color: '#475569',
   },
   sectionList: {
     gap: 28,
