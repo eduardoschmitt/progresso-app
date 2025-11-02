@@ -13,6 +13,7 @@ const celebrationIllustration = require('../../../../assets/images/parabens.png'
 export function ResultSummaryCard({ summary }: Props) {
   return (
     <View style={styles.container} accessibilityRole="summary">
+      <Text style={styles.title}>Diagnóstico concluído!</Text>
       <Text style={styles.headerMessage}>{summary.feedbackMessage}</Text>
 
       <View style={styles.celebrationContainer}>
@@ -37,6 +38,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+  },
+  title: {
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '600',
+    color: '#0F172A',
+    textAlign: 'center',
   },
   headerMessage: {
     fontSize: 16,
