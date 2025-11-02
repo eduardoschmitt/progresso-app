@@ -1,3 +1,5 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useMemo } from 'react';
 import {
   ActivityIndicator,
@@ -9,8 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 
 import CustomButton from '@/components/CustomButton';
 import { Colors } from '@/constants/theme';
@@ -335,8 +335,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   questionIcon: {
-    width: 56,
-    height: 56,
+    width: 120,
+    height: 120,
     marginTop: 0,
   },
   questionOrder: {
