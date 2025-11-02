@@ -18,6 +18,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useDiagnosticQuiz } from '@/hooks/use-diagnostic-quiz';
 import { resolveIconUrl } from '@/utils/iconUrl';
 
+const questionIllustration = require('../../../assets/images/pergunta.png');
+
 export default function DiagnosticQuizModal() {
   const colorScheme = useColorScheme();
   const {
@@ -134,7 +136,15 @@ export default function DiagnosticQuizModal() {
               <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.questionContainer}>
                   <Text style={styles.questionOrder}>Pergunta {currentQuestionIndex + 1}</Text>
-                  <Text style={styles.questionText}>{question.enunciado}</Text>
+                  <View style={styles.questionContent}>
+                    <Image
+                      source={questionIllustration}
+                      style={styles.questionIcon}
+                      contentFit="contain"
+                      accessibilityIgnoresInvertColors
+                    />
+                    <Text style={styles.questionText}>{question.enunciado}</Text>
+                  </View>
                 </View>
 
                 <View style={styles.optionsContainer}>
@@ -319,6 +329,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 8,
   },
+  questionContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  questionIcon: {
+    width: 56,
+    height: 56,
+    marginTop: 0,
+  },
   questionOrder: {
     fontSize: 14,
     fontWeight: '600',
@@ -328,6 +348,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#0F172A',
+    flex: 1,
   },
   optionsContainer: {
     gap: 12,

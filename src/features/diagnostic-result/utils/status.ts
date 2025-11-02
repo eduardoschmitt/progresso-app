@@ -62,7 +62,8 @@ export function buildSummaryFeedback(
     totalQuestions,
     correctAnswers,
     accuracy,
-    feedbackTitle: 'Vamos juntos melhorar?',
-    feedbackMessage: 'Identificamos oportunidades de aprendizado. Não desanime: cada etapa é um passo rumo à evolução.',
+    feedbackTitle: 'Diagnóstico inicial concluído!',
+    feedbackMessage:
+      'Este é o ponto de partida para personalizarmos sua jornada. A partir daqui, vamos indicar conteúdos sob medida para evoluir no seu ritmo.',
   };
 }
