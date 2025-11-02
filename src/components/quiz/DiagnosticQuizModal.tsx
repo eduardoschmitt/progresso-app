@@ -335,9 +335,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   questionIcon: {
-    width: 32,
-    height: 32,
-    marginTop: 2,
+    width: 56,
+    height: 56,
+    marginTop: 0,
   },
   questionOrder: {
     fontSize: 14,
@@ -348,6 +348,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#0F172A',
+    flex: 1,
   },
   optionsContainer: {
     gap: 12,
