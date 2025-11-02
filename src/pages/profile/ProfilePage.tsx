@@ -1,15 +1,18 @@
 import React, { useCallback } from 'react';
 import { Alert, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 
 import CustomButton from '@/components/CustomButton';
 import { useAuthContext } from '@/context/AuthContext';
 
 export default function ProfilePage() {
+  const router = useRouter();
   const { clearSession } = useAuthContext();
 
   const handleDisconnect = useCallback(async () => {
     try {
       await clearSession();
+      router.replace('(auth)');
     } catch (error) {
       console.error('Failed to clear session', error);
       Alert.alert(
@@ -17,7 +20,7 @@ export default function ProfilePage() {
         'Não foi possível sair da conta. Tente novamente em instantes.',
       );
     }
-  }, [clearSession]);
+  }, [clearSession, router]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -27,13 +30,12 @@ export default function ProfilePage() {
           Personalize suas preferências e acompanhe seus dados pessoais.
         </Text>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Conexão com a conta</Text>
+          <Text style={styles.cardTitle}>Sair da conta</Text>
           <Text style={styles.cardDescription}>
-            Desconecte-se do aplicativo caso esteja usando um dispositivo
-            compartilhado.
+            Faça logout com segurança e volte para a tela inicial de acesso.
           </Text>
           <CustomButton
-            title="Desconectar"
+            title="Sair da conta"
             onPress={handleDisconnect}
             style={styles.logoutButton}
             textStyle={styles.logoutButtonText}
