@@ -1,7 +1,27 @@
-import React from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { Alert, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+
+import CustomButton from '@/components/CustomButton';
+import { useAuthContext } from '@/context/AuthContext';
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const { clearSession } = useAuthContext();
+
+  const handleDisconnect = useCallback(async () => {
+    try {
+      await clearSession();
+      router.replace('(auth)');
+    } catch (error) {
+      console.error('Failed to clear session', error);
+      Alert.alert(
+        'Erro ao desconectar',
+        'Não foi possível sair da conta. Tente novamente em instantes.',
+      );
+    }
+  }, [clearSession, router]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -9,6 +29,18 @@ export default function ProfilePage() {
         <Text style={styles.subtitle}>
           Personalize suas preferências e acompanhe seus dados pessoais.
         </Text>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Sair da conta</Text>
+          <Text style={styles.cardDescription}>
+            Faça logout com segurança e volte para a tela inicial de acesso.
+          </Text>
+          <CustomButton
+            title="Sair da conta"
+            onPress={handleDisconnect}
+            style={styles.logoutButton}
+            textStyle={styles.logoutButtonText}
+          />
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -34,5 +66,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     color: '#475569',
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    gap: 12,
+    marginTop: 24,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  cardTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  cardDescription: {
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#475569',
+  },
+  logoutButton: {
+    backgroundColor: '#FEE2E2',
+    shadowColor: 'transparent',
+  },
+  logoutButtonText: {
+    color: '#B91C1C',
   },
 });
