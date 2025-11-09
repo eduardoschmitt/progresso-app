@@ -10,15 +10,17 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
-import CustomButton from '@/components/CustomButton';
 import { ApiError, apiConfig } from '@/api/httpClient';
+import CustomButton from '@/components/CustomButton';
 import { useAuth } from '@/hooks/use-auth';
 import { loginUser, registerUser } from '@/service/authService';
 
 const { width: screenWidth } = Dimensions.get('window');
+const isDesktopWeb = Platform.OS === 'web' && screenWidth >= 1024;
+const desktopFactor = isDesktopWeb ? 0.3 : 1;
 
 type AuthMode = 'login' | 'register';
 
@@ -366,11 +368,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   welcomeImage: {
-    width: screenWidth * 0.6,
-    height: screenWidth * 0.4,
+    width: screenWidth * 0.6 * desktopFactor,
+    height: screenWidth * 0.4 * desktopFactor,
     aspectRatio: 2,
     resizeMode: 'contain',
     alignSelf: 'center',
     marginVertical: 8,
-  },
+  },  
 });
