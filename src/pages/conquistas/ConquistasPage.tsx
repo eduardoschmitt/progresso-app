@@ -1,8 +1,9 @@
 import { apiConfig } from '@/api/httpClient';
 import type { Insignia } from '@/model/insignias/Insignia';
 import { getInsignias, sortInsignias } from '@/service/conquistas/conquistasService';
+import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -32,23 +33,32 @@ export default function ConquistasPage() {
   const [items, setItems] = useState<Insignia[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-        const data = await getInsignias({ sincronizar: true });
-        if (!mounted) return;
-        setItems(Array.isArray(data) ? data : []);
-        setError(null);
-      } catch (e: any) {
-        setError(e?.message ?? 'Erro ao carregar insígnias.');
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let ativo = true;
+
+      const executar = async () => {
+        try {
+          if (ativo) setLoading(true);
+          const data = await getInsignias({ sincronizar: true });
+          if (!ativo) return;
+          setItems(Array.isArray(data) ? data : []);
+          setError(null);
+        } catch (e: any) {
+          if (!ativo) return;
+          setError(e?.message ?? 'Erro ao carregar insígnias.');
+        } finally {
+          if (ativo) setLoading(false);
+        }
+      };
+
+      executar();
+
+      return () => {
+        ativo = false;
+      };
+    }, []),
+  );
 
   const rows = useMemo(() => [...items].sort(sortInsignias), [items]);
 

@@ -16,7 +16,12 @@ export function TreinoConclusionCard({ conclusao, erroConclusao }: TreinoConclus
       <Text style={styles.text}>Respondidas: {conclusao.totalRespondidas}</Text>
       <Text style={styles.text}>Corretas: {conclusao.totalCorretas}</Text>
       <Text style={styles.text}>Pontuação: {Math.round(conclusao.pontuacao)}%</Text>
-      <Text style={styles.text}>Concluído em: {conclusao.concluidoEm}</Text>
+      <Text style={styles.text}>
+        Concluído em: {new Date(conclusao.concluidoEm).toLocaleString('pt-BR', {
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        })}
+      </Text>
 
       {conclusao.novasInsignias.length > 0 ? (
         <View style={styles.badgeList}>

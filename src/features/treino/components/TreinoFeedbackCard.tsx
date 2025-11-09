@@ -22,6 +22,17 @@ export function TreinoFeedbackCard({
   const titulo = resposta.correta ? 'Resposta correta!' : 'Resposta incorreta.';
   const tituloStyle = resposta.correta ? styles.feedbackTitleSuccess : styles.feedbackTitleError;
 
+  const formatarData = (dataISO: string) => {
+    const data = new Date(dataISO);
+    return data.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };  
+
   return (
     <View style={styles.container}>
       <Text style={[styles.feedbackTitle, tituloStyle]}>{titulo}</Text>
@@ -44,7 +55,7 @@ export function TreinoFeedbackCard({
 
       {resposta.proximaRevisaoEm ? (
         <Text style={styles.nextReviewText}>
-          Próxima revisão recomendada em: {resposta.proximaRevisaoEm}
+          Próxima revisão recomendada em: {formatarData(resposta.proximaRevisaoEm)}
         </Text>
       ) : null}
 
