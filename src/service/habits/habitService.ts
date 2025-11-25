@@ -240,10 +240,17 @@ export const deleteHabit = async (habitId: string): Promise<void> => {
     throw new Error('Identificador do hábito é obrigatório.');
   }
 
-  const { token } = await ensureAuth();
+  const { token, usuarioId } = await ensureAuth();
+
+  if (!usuarioId) {
+    throw new Error('Usuário não identificado. Não foi possível remover o hábito.');
+  }
+
+  const sp = new URLSearchParams();
+  sp.set('usuarioId', usuarioId);
 
   await request<void>({
-    url: `/api/habitos/${habitId}`,
+    url: `/api/habitos/${habitId}?${sp.toString()}`,
     method: 'DELETE',
     ...withAuthorization(token),
   });
