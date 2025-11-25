@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
+  Modal,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -56,6 +56,7 @@ export default function HabitsPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const [pendingHabits, setPendingHabits] = useState<Record<string, boolean>>({});
+  const [habitPendingDeletion, setHabitPendingDeletion] = useState<Habit | null>(null);
 
   const setHabitPending = useCallback((habitId: string, pending: boolean) => {
     setPendingHabits((current) => {
@@ -173,19 +174,22 @@ export default function HabitsPage() {
     [setHabitPending],
   );
 
-  const handleDeleteHabit = useCallback(
-    (habit: Habit) => {
-      Alert.alert(
-        'Remover hábito',
-        `Tem certeza de que deseja remover "${habit.nome}"? Essa ação não pode ser desfeita.`,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Remover', style: 'destructive', onPress: () => void performDelete(habit) },
-        ],
-      );
-    },
-    [performDelete],
-  );
+  const handleDeleteHabit = useCallback((habit: Habit) => {
+    setHabitPendingDeletion(habit);
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!habitPendingDeletion) {
+      return;
+    }
+
+    void performDelete(habitPendingDeletion);
+    setHabitPendingDeletion(null);
+  }, [habitPendingDeletion, performDelete]);
+
+  const handleCancelDelete = useCallback(() => {
+    setHabitPendingDeletion(null);
+  }, []);
 
   const openCreateModal = useCallback(() => {
     setFormMode('create');
@@ -389,6 +393,32 @@ export default function HabitsPage() {
         }}
         onSubmit={handleSubmitForm}
       />
+
+      <Modal
+        visible={!!habitPendingDeletion}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelDelete}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Remover hábito</Text>
+            <Text style={styles.modalDescription}>
+              Tem certeza de que deseja remover "{habitPendingDeletion?.nome}"? Essa ação não pode ser
+              desfeita.
+            </Text>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancelButton} onPress={handleCancelDelete}>
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalDeleteButton} onPress={handleConfirmDelete}>
+                <Text style={styles.modalDeleteText}>Remover</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -439,6 +469,61 @@ const styles = StyleSheet.create({
   toastDismiss: {
     color: '#475569',
     fontSize: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    gap: 16,
+    width: '100%',
+    maxWidth: 420,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  modalDescription: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#475569',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  modalCancelButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#E2E8F0',
+  },
+  modalCancelText: {
+    color: '#0F172A',
+    fontWeight: '700',
+  },
+  modalDeleteButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#DC2626',
+  },
+  modalDeleteText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   toastSuccess: {
     backgroundColor: '#DCFCE7',
