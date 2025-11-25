@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -175,14 +176,22 @@ export default function HabitsPage() {
 
   const handleDeleteHabit = useCallback(
     (habit: Habit) => {
-      Alert.alert(
-        'Remover hábito',
-        `Tem certeza de que deseja remover "${habit.nome}"? Essa ação não pode ser desfeita.`,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Remover', style: 'destructive', onPress: () => void performDelete(habit) },
-        ],
-      );
+      const confirmMessage = `Tem certeza de que deseja remover "${habit.nome}"? Essa ação não pode ser desfeita.`;
+
+      if (Platform.OS === 'web') {
+        const confirmed = typeof window === 'undefined' ? true : window.confirm(confirmMessage);
+
+        if (confirmed) {
+          void performDelete(habit);
+        }
+
+        return;
+      }
+
+      Alert.alert('Remover hábito', confirmMessage, [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Remover', style: 'destructive', onPress: () => void performDelete(habit) },
+      ]);
     },
     [performDelete],
   );
